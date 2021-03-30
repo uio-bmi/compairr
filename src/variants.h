@@ -1,6 +1,5 @@
-
 /*
-    Copyright (C) 2012-2020 Torbjorn Rognes and Frederic Mahe
+    Copyright (C) 2012-2021 Torbjorn Rognes and Frederic Mahe
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -41,7 +40,7 @@ enum mutation_kind_enum
 
 /*
   Info about the variants:
-  
+
   For single mutations, only position1 and residue1 is used.
 
   For double mutations, position1 and residue1 applies to the first

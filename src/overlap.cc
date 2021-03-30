@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2012-2020 Torbjorn Rognes and Frederic Mahe
+    Copyright (C) 2012-2021 Torbjorn Rognes and Frederic Mahe
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -155,7 +155,7 @@ void check_variants(unsigned int seed,
                     variant_list, & variant_count);
 
   /* init bloom filter for duplicates */
-  
+
   uint64_t maxvar = max_variants(seqlen+2);
   uint64_t bloomsize = 1; //262144;
   while (bloomsize < maxvar)
@@ -170,7 +170,7 @@ void check_variants(unsigned int seed,
 
           /* Check for potential duplicate variants. */
           /* We only care about those duplicate that match the target. */
-          
+
           bool dup = false;
 
 #if 1
@@ -179,7 +179,7 @@ void check_variants(unsigned int seed,
 #if 0
               printf("Possible duplicate!\n");
 #endif
-              
+
               /* check if there is a real duplicate */
 
               unsigned char * seq1 = (unsigned char*) xmalloc(seqlen + 3);
@@ -188,7 +188,7 @@ void check_variants(unsigned int seed,
               for (unsigned int j = 0; j < i; j++)
                 {
                   struct var_s * v = variant_list + j;
-                  
+
                   if (var->hash == v->hash)
                     {
 #if 0

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2012-2020 Torbjorn Rognes and Frederic Mahe
+    Copyright (C) 2012-2021 Torbjorn Rognes and Frederic Mahe
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -244,7 +244,7 @@ void args_init(int argc, char **argv)
   else
     {
       if (optind + 2 == argc)
-        {    
+        {
           input1_filename = argv[optind];
           input2_filename = argv[optind + 1];
         }
@@ -322,6 +322,6 @@ int main(int argc, char** argv)
   fprintf(logfile, "\n");
 
   overlap(input1_filename, input2_filename);
-  
+
   close_files();
 }

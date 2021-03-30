@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2012-2020 Torbjorn Rognes and Frederic Mahe
+    Copyright (C) 2012-2021 Torbjorn Rognes and Frederic Mahe
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -340,7 +340,7 @@ inline void add_variant(uint64_t hash,
   if (bloom_get(bloom, hash))
     printf("BLOOM HIT!\n");
 #endif
-  
+
   // check hash table
 
 #ifdef USEHASH
@@ -1114,7 +1114,7 @@ void generate_variants(uint64_t hash,
 #endif
 #endif
 
-  
+
 #ifdef USEBLOOM
   uint64_t bloomsize = 1;
   uint64_t needed = max_variants(seqlen) * 2;
@@ -1194,7 +1194,7 @@ void generate_variants(uint64_t hash,
 #ifdef HASHSTATS
   printf("Hashstats: %llu\n", tries);
 #endif
-  
+
 #ifdef DUMP
   exit(1);
 #endif

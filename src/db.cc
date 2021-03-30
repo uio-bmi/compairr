@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2012-2020 Torbjorn Rognes and Frederic Mahe
+    Copyright (C) 2012-2021 Torbjorn Rognes and Frederic Mahe
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -122,7 +122,7 @@ int compare_bysample(const void * a, const void * b)
 struct db * db_create()
 {
   struct db * d = (struct db *) xmalloc(sizeof(struct db));
-  
+
   d->seqindex = nullptr;
   d->seqindex_alloc = 0;
   d->sequences = 0;

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2012-2020 Torbjorn Rognes and Frederic Mahe
+    Copyright (C) 2012-2021 Torbjorn Rognes and Frederic Mahe
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -27,7 +27,7 @@ struct hashtable_s
   unsigned int * hash_data;
   uint64_t hash_tablesize;
 };
-  
+
 inline uint64_t hash_get_tablesize(struct hashtable_s * ht)
 {
   return ht->hash_tablesize;
