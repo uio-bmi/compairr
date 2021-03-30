@@ -141,7 +141,7 @@ Here is the result in the `output.tsv` file:
 ```
 #sample	B1	B2
 A1	0.0e+00	7.0e-04
-A2	1.5e-03	0.0e+00
+A2	4.5e-03	0.0e+00
 ```
 
 Here, the sequence in sample A1 is similar to the sequence in sample
@@ -155,17 +155,30 @@ sequences in sample B1, with frequencies 0.1 and 0.07. The first
 sequence in B1 is identical, while the second sequence in B1 has an F
 instead of a Y in the 10th position. The result is 0.03 * (0.05 + 0.1)
 = 0.03 * 0.15 = 0.0045 = 4.5e-03. That values is found in the second
-coolumn on the third line.
+column on the third line.
 
 Since there are no sequences from sample A1 similar to B1 or from A2
 similar to B1, the other values are zero.
 
 
+## Implementation
+
+The program is written in C++. The strategy for finding similar
+sequences is based on a similar concept developed in
+[swarm](https://github.com/torognes/swarm). Basically, a 64-bit hash
+is computed for all sequences in the sets. All hashes for one set are
+stored in a Bloom filter and in a hash table. We then look for matches
+to sequences in the second set by looking them up in the Bloom filter
+and then, if there was a match, in the hash table. To find matches
+with 1 or 2 substitutions or indels, the hashes of all these
+'microvariants' are generated and looked up.
+
+
 ## Binaries
 
-The program is written in C++ and should compile easily by running
-`make` in the `src` directory. Binaries for Linux and macOS are
-distributed with each release.
+The code should compile easily by running `make` in the `src`
+directory. Binaries for Linux and macOS are distributed with each
+release.
 
 
 ## Performance
