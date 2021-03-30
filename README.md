@@ -92,7 +92,7 @@ We run the following command:
 Here is the output to the console:
 
 ```
-vdjsearch 0.0.1 - Immune repertoire analysis
+vdjsearch 0.0.2 - Immune repertoire analysis
 
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
