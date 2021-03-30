@@ -102,10 +102,10 @@ Output file (o):   output.tsv
 Threads: (t)       1
 
 Immune receptor repertoire set 1 in file seta.tsv
-Reading sequences: 100%  
+Reading sequences: 100%
 Sequences: 2, residues: 25, shortest: 11, longest: 14, average: 12.5
 Samples:           2
-Indexing:          100%  
+Indexing:          100%
 Sorting:           100%
 
 #no	seqs	freq	sample
@@ -114,10 +114,10 @@ Sorting:           100%
 Sum	2	0.04000
 
 Immune receptor repertoire set 2 in file setb.tsv
-Reading sequences: 100%  
+Reading sequences: 100%
 Sequences: 3, residues: 39, shortest: 11, longest: 14, average: 13.0
 Samples:           2
-Indexing:          100%  
+Indexing:          100%
 Sorting:           100%
 
 #no	seqs	freq	sample
@@ -127,10 +127,10 @@ Sum	3	0.22000
 
 Unique v_genes:    2
 Unique d_genes:    2
-Computing hashes:  100%  
-Computing hashes:  100%  
-Hashing sequences: 100% 
-Analysing:         100% 
+Computing hashes:  100%
+Computing hashes:  100%
+Hashing sequences: 100%
+Analysing:         100%
 
 ```
 

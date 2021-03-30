@@ -272,7 +272,7 @@ void sim_thread(int64_t t)
         sample_matrix[set2_samples * i + j] += sample_hits[j] * f;
 
 #ifdef COUNTMATCHES
-      printf("matches: %llu\n", matches);
+      printf("matches: %" PRIu64 "\n", matches);
 #endif
     }
   pthread_mutex_unlock(&network_mutex);
@@ -332,7 +332,7 @@ void overlap(char * set1_filename, char * set2_filename)
   for (unsigned int i = 0; i < set1_samples; i++)
     {
       unsigned int s = set1_lookup_sample[i];
-      fprintf(logfile, "%u\t%llu\t%.5lf\t%s\n",
+      fprintf(logfile, "%u\t%" PRIu64 "\t%.5lf\t%s\n",
               i+1,
               set1_sample_size[s],
               set1_sample_freq[s],
@@ -340,7 +340,7 @@ void overlap(char * set1_filename, char * set2_filename)
       sum_size += set1_sample_size[s];
       sum_freq += set1_sample_freq[s];
     }
-  fprintf(logfile, "Sum\t%llu\t%.5lf\n", sum_size, sum_freq);
+  fprintf(logfile, "Sum\t%" PRIu64 "\t%.5lf\n", sum_size, sum_freq);
 
   fprintf(logfile, "\n");
 
@@ -392,7 +392,7 @@ void overlap(char * set1_filename, char * set2_filename)
   for (unsigned int j = 0; j < set2_samples; j++)
     {
       unsigned int t = set2_lookup_sample[j];
-      fprintf(logfile, "%u\t%llu\t%.5lf\t%s\n",
+      fprintf(logfile, "%u\t%" PRIu64 "\t%.5lf\t%s\n",
               j+1,
               set2_sample_size[t],
               set2_sample_freq[t],
@@ -400,7 +400,7 @@ void overlap(char * set1_filename, char * set2_filename)
       sum_size += set2_sample_size[t];
       sum_freq += set2_sample_freq[t];
     }
-  fprintf(logfile, "Sum\t%llu\t%.5lf\n", sum_size, sum_freq);
+  fprintf(logfile, "Sum\t%" PRIu64 "\t%.5lf\n", sum_size, sum_freq);
 
   fprintf(logfile, "\n");
 
@@ -411,10 +411,10 @@ void overlap(char * set1_filename, char * set2_filename)
                db_get_v_gene_count(),
                db_get_d_gene_count());
 
-  fprintf(logfile, "Unique v_genes:    %llu\n",
+  fprintf(logfile, "Unique v_genes:    %" PRIu64 "\n",
           db_get_v_gene_count());
 
-  fprintf(logfile, "Unique d_genes:    %llu\n",
+  fprintf(logfile, "Unique d_genes:    %" PRIu64 "\n",
           db_get_d_gene_count());
 
   /* compute hashes for each sequence in database */

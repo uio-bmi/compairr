@@ -89,7 +89,7 @@ void args_show()
 {
   fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
   fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename);
-  fprintf(logfile, "Differences (d):   %lld\n", opt_differences);
+  fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
   fprintf(logfile, "Output file (o):   %s\n", opt_output_file);
   fprintf(logfile, "Threads: (t)       %" PRId64 "\n", opt_threads);

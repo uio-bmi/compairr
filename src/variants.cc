@@ -332,6 +332,8 @@ inline void add_variant(uint64_t hash,
                         struct bloom_s * bloom,
                         struct hashtable_s * ht)
 {
+  (void) bloom;
+
 #ifdef HASHSTATS
   tries++;
 #endif
@@ -1192,7 +1194,7 @@ void generate_variants(uint64_t hash,
 #endif
 
 #ifdef HASHSTATS
-  printf("Hashstats: %llu\n", tries);
+  printf("Hashstats: %" PRIu64 "\n", tries);
 #endif
 
 #ifdef DUMP

@@ -314,14 +314,14 @@ void db_read(struct db * d, const char * filename)
   fclose(fp);
 
   fprintf(logfile,
-          "Sequences: %u, residues: %llu, shortest: %u, longest: %u, average: %4.1lf\n",
+          "Sequences: %u, residues: %" PRIu64 ", shortest: %u, longest: %u, average: %4.1lf\n",
           d->sequences,
           d->residues_count,
           d->shortest,
           d->longest,
           1.0 * d->residues_count / d->sequences);
 
-  fprintf(logfile, "Samples:           %llu\n", d->sample_count);
+  fprintf(logfile, "Samples:           %" PRIu64 "\n", d->sample_count);
 
   /* add sequence pointers to index table */
 
