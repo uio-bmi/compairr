@@ -234,7 +234,7 @@ The analysis was performed on a Mac Mini M1.
 * Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017)
 **Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.**
 *Nature Genetics*, 49 (5): 659-665.
-doi:[10.1038/ng.3822](https://doi.org/10.1038.ng.3822)
+doi:[10.1038/ng.3822](https://doi.org/10.1038/ng.3822)
 
 
 ## Future plans
