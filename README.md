@@ -214,8 +214,8 @@ As a preliminary performance test, Cohort 2 ("Keck") of
 by Emerson et al. was compared to itself. It contains 120 repertoires
 with a total of 24 544 336 sequences. The timing results are shown below.
 
-Distance | Indels | Threads | Time (s) | Time (min) | Note
--------: | :----: | ------: | -------: | ---------: | ----
+Distance | Indels | Threads | Time (s) | Time (mm:ss) | Note
+-------: | :----: | ------: | -------: | -----------: | ----
 0 | no  | 1 |   74 |  1.14 | Almost all time was used to read files
 1 | no  | 1 |  159 |  2.39
 1 | no  | 4 |   97 |  1.37
