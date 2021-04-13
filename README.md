@@ -209,11 +209,32 @@ release.
 
 ## Performance
 
-Two small repertoire sets were compared as a simple performance
-test. The first set had 14 samples and a total of 2 million
-sequences. The second set had 8 samples and a total of 1 million
-sequences. Only 1 substitution was allowed. The analysis took 5
-seconds on my Mac Mini M1 using 1 thread.
+As a preliminary performance test, Cohort 2 ("Keck") of
+[the dataset](https://s3-us-west-2.amazonaws.com/publishedproject-supplements/emerson-2017-natgen/emerson-2017-natgen.zip)
+by Emerson et al. was compared to itself. It contains 120 repertoires
+with a total of 24 544 336 sequences. The timing results are shown below.
+
+Distance | Indels | Threads | Time
+:------: | :----: | :-----: | :--:
+0 | no  | 1 | 74 seconds
+1 | no  | 1 | 159 seconds
+1 | no  | 4 | 97 seconds
+1 | yes | 1 | 236 seconds
+1 | yes | 4 | 123 seconds
+2 | no  | 4 | 2871 seconds = 48m 51s
+
+Memory usage was 3.44GB, corresponding to an average of about 70 bytes
+per sequence. Times are wall time measured by `/usr/bin/time`.
+
+The analysis was performed on a Mac Mini M1.
+
+
+## References
+
+* Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017)
+**Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.**
+*Nature Genetics*, 49 (5): 659-665.
+doi:[10.1038/ng.3822](https://doi.org/10.1038.ng.3822)
 
 
 ## Future plans
