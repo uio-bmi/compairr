@@ -8,19 +8,19 @@ The tool will find the sequences in the two sets that are similar and
 output a matrix with results.
 
 The user can specify whether 0, 1 or 2 differences are allowed when
-comparing sequences, using the option -d or --differences. To allow
-indels (insertions or deletions) the option -i or --indels may be
+comparing sequences, using the option `-d` or `--differences`. To allow
+indels (insertions or deletions) the option `-i` or `--indels` may be
 specified, otherwize only substitutions are allowed.  By default, no
 differences are allowed.
 
 The V and J genes specified for each sequence must also match, unless
-the -g or --ignore-genes option is in effect.
+the `-g` or `--ignore-genes` option is in effect.
 
 The similar sequences of each sample in each set are found.  Their
 frequencies is taken into account and a matrix is output containing a
 value for each combination of samples in the two sets. The value is
 the sum of the products of the frequency of the two sequences that
-match in the two samples. If the option -f or --ignore-frequency is
+match in the two samples. If the option `-f` or `--ignore-frequency` is
 specified, the frequency information is ignored and all frequencies
 set to 1.0.
 
@@ -29,15 +29,15 @@ indels are allowed at the same time. That combination is therefore
 currently disabled and it is probably not useful anyway.
 
 The code is multi-threaded. The number of threads may be specified
-with the -t or --threads option.
+with the `-t` or `--threads` option.
 
-Run the program with -v or --version for version information.
+Run the program with `-v` or `--version` for version information.
 
-Use the -h or --help option to show some help information.
+Use the `-h` or `--help` option to show some help information.
 
 While the program is running it will print some status and progress
 information to standard error (stderr) unless a log file has been
-specified with the -l og --log option.
+specified with the `-l` or `--log` option.
 
 
 ## Input files
@@ -65,8 +65,8 @@ containing the output matrix. The first line contains the text
 following lines contains the sample name in the first set, followed by
 the values corresponding to the comparison of this sample with each of
 the samples in the second set. The output is written to standard out
-(stdout) unless a file name has been specified with the -o or
---output-file option.
+(stdout) unless a file name has been specified with the `-o` or
+`--output-file` option.
 
 
 ## Command line options
