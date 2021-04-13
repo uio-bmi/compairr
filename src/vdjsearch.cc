@@ -46,14 +46,15 @@ static char * progname;
 static char * input1_filename;
 static char * input2_filename;
 
+bool opt_help;
+bool opt_ignore_frequency;
+bool opt_ignore_genes;
+bool opt_indels;
+bool opt_version;
 char * opt_log;
 char * opt_output_file;
-
 int64_t opt_differences;
-int64_t opt_help;
-int64_t opt_indels;
 int64_t opt_threads;
-int64_t opt_version;
 
 /* Other variables */
 
@@ -89,6 +90,10 @@ void args_show()
 {
   fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
   fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename);
+  fprintf(logfile, "Ignore frequency:  %s\n",
+          opt_ignore_frequency ? "Yes" : "No");
+  fprintf(logfile, "Ignore genes:      %s\n",
+          opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
   fprintf(logfile, "Output file (o):   %s\n", opt_output_file);
@@ -100,8 +105,10 @@ void args_usage()
   fprintf(stderr, "Usage: %s [OPTIONS] TSVFILE1 TSVFILE2\n", PROG_NAME);
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
-  fprintf(stderr, " -d, --differences INTEGER           number (0-2) of differences accepted (1)\n");
+  fprintf(stderr, " -d, --differences INTEGER           number (0-2) of differences accepted (0)\n");
   fprintf(stderr, " -i, --indels                        allow insertions or deletions (no)\n");
+  fprintf(stderr, " -f, --ignore-frequency              ignore frequency / read count information\n");
+  fprintf(stderr, " -g, --ignore-genes                  ignore V and J gene information\n");
   fprintf(stderr, " -h, --help                          display this help and exit\n");
   fprintf(stderr, " -t, --threads INTEGER               number of threads to use (1)\n");
   fprintf(stderr, " -v, --version                       display version information and exit\n");
@@ -129,7 +136,9 @@ void args_init(int argc, char **argv)
   input1_filename = 0;
   input2_filename = 0;
 
-  opt_differences = 1;
+  opt_differences = 0;
+  opt_ignore_frequency = 0;
+  opt_ignore_genes = 0;
   opt_help = 0;
   opt_indels = 0;
   opt_log = nullptr;
@@ -139,13 +148,15 @@ void args_init(int argc, char **argv)
 
   opterr = 1;
 
-  char short_options[] = "d:hil:o:t:v";
+  char short_options[] = "d:fghil:o:t:v";
 
-  /* unused short option letters: abcefgjkmnpqrsuwxyz */
+  /* unused short option letters: abcejkmnpqrsuwxyz */
 
   static struct option long_options[] =
   {
     {"differences",           required_argument, nullptr, 'd' },
+    {"ignore-frequency",      no_argument,       nullptr, 'f' },
+    {"ignore-genes",          no_argument,       nullptr, 'g' },
     {"help",                  no_argument,       nullptr, 'h' },
     {"indels",                no_argument,       nullptr, 'i' },
     {"log",                   required_argument, nullptr, 'l' },
@@ -197,6 +208,16 @@ void args_init(int argc, char **argv)
       case 'd':
         /* differences */
         opt_differences = args_long(optarg, "-d or --differences");
+        break;
+
+      case 'f':
+        /* ignore-frequency */
+        opt_ignore_frequency = 1;
+        break;
+
+      case 'g':
+        /* ignore-genes */
+        opt_ignore_genes = 1;
         break;
 
       case 'h':
@@ -264,9 +285,9 @@ void args_init(int argc, char **argv)
   if ((opt_differences < 0) || (opt_differences > 2))
     fatal("Differences specifed with -d or -differences must be 0, 1 or 2.");
 
-#if 0
+#if 1
   if (opt_indels && (opt_differences != 1))
-    fatal("Indels is only allowed when d=1");
+    fatal("Indels are only allowed when d=1");
 #endif
 }
 

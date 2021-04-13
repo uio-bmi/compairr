@@ -414,7 +414,7 @@ uint64_t db_get_d_gene(struct db * d, uint64_t seqno)
 
 double db_get_freq(struct db * d, uint64_t seqno)
 {
-  return d->seqindex[seqno].freq;
+  return opt_ignore_frequency ? 1.0 : d->seqindex[seqno].freq;
 }
 
 uint64_t db_getsampleno(struct db * d, uint64_t seqno)

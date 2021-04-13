@@ -48,12 +48,9 @@ static hashtable_s * hashtable = nullptr;
 static uint64_t matches = 0;
 #endif
 
-void check_variants(unsigned int seed,
-                    var_s * variant_list,
-                    unsigned int * hits_data,
-                    unsigned int * hits_count);
+//#define AVOID_DUPLICATES 1
 
-void sim_thread(int64_t t);
+const unsigned int CHUNK = 1000;
 
 inline void hash_insert(unsigned int amp)
 {
@@ -84,10 +81,10 @@ int set2_compare_by_sample_name(const void * a, const void * b)
   return strcmp(db_getsamplename(d2, *x), db_getsamplename(d2, *y));
 }
 
-inline void find_variant_matches(unsigned int seed,
-                                 var_s * var,
-                                 double * sample_hits,
-                                 struct bloom_s * bloom_d)
+void find_variant_matches(unsigned int seed,
+                          var_s * var,
+                          double * sample_hits,
+                          struct bloom_s * bloom_d)
 {
   /* seed in set 1, amp in set 2 */
 
@@ -111,7 +108,8 @@ inline void find_variant_matches(unsigned int seed,
           unsigned int amp_v_gene = db_get_v_gene(d2, amp);
           unsigned int amp_d_gene = db_get_d_gene(d2, amp);
 
-          if ((seed_v_gene == amp_v_gene) && (seed_d_gene == amp_d_gene))
+          if (opt_ignore_genes ||
+              ((seed_v_gene == amp_v_gene) && (seed_d_gene == amp_d_gene)))
             {
               unsigned char * seed_sequence
                 = (unsigned char *) db_getsequence(d, seed);
@@ -128,10 +126,13 @@ inline void find_variant_matches(unsigned int seed,
                 {
                   double g = db_get_freq(d2, amp);
                   sample_hits[db_getsampleno(d2, amp)] += g;
+
 #ifdef COUNTMATCHES
                   matches++;
 #endif
-                  bloom_set(bloom_d, var->hash);
+
+                  if (bloom_d)
+                    bloom_set(bloom_d, var->hash);
                 }
             }
         }
@@ -139,9 +140,9 @@ inline void find_variant_matches(unsigned int seed,
     }
 }
 
-void check_variants(unsigned int seed,
-                    var_s * variant_list,
-                    double * sample_hits)
+void process_variants(unsigned int seed,
+                      var_s * variant_list,
+                      double * sample_hits)
 {
   unsigned int variant_count = 0;
   unsigned char * sequence = (unsigned char *) db_getsequence(d, seed);
@@ -154,33 +155,52 @@ void check_variants(unsigned int seed,
                     sequence, seqlen, v_gene, d_gene,
                     variant_list, & variant_count);
 
-  /* init bloom filter for duplicates */
-
-  uint64_t maxvar = max_variants(seqlen+2);
-  uint64_t bloomsize = 1; //262144;
-  while (bloomsize < maxvar)
-    bloomsize *= 2;
-  struct bloom_s * bloom_d = bloom_init(bloomsize);
-
   for(unsigned int i = 0; i < variant_count; i++)
     {
       var_s * var = variant_list + i;
       if (bloom_get(bloom_a, var->hash))
         {
+          find_variant_matches(seed, var, sample_hits, nullptr);
+        }
+    }
+}
 
-          /* Check for potential duplicate variants. */
+void process_variants_avoid_duplicates(unsigned int seed,
+                                       var_s * variant_list,
+                                       double * sample_hits,
+                                       struct bloom_s * bloom_d)
+{
+  unsigned int variant_count = 0;
+  unsigned char * sequence = (unsigned char *) db_getsequence(d, seed);
+  unsigned int seqlen = db_getsequencelen(d, seed);
+  uint64_t hash = db_gethash(d, seed);
+  uint64_t v_gene = db_get_v_gene(d, seed);
+  uint64_t d_gene = db_get_d_gene(d, seed);
+
+  generate_variants(hash,
+                    sequence, seqlen, v_gene, d_gene,
+                    variant_list, & variant_count);
+
+  bloom_zap(bloom_d);
+
+  for(unsigned int i = 0; i < variant_count; i++)
+    {
+      var_s * var = variant_list + i;
+
+      if (bloom_get(bloom_a, var->hash))
+        {
+
+          /* Check for potential duplicate variants due to limitations */
+          /* in the variant generation algorithm.                      */
           /* We only care about those duplicate that match the target. */
 
           bool dup = false;
 
-#if 1
           if (bloom_get(bloom_d, var->hash))
             {
-#if 0
-              printf("Possible duplicate!\n");
-#endif
-
               /* check if there is a real duplicate */
+
+              printf("Potential duplicate variant!\n");
 
               unsigned char * seq1 = (unsigned char*) xmalloc(seqlen + 3);
               unsigned char * seq2 = (unsigned char*) xmalloc(seqlen + 3);
@@ -191,7 +211,7 @@ void check_variants(unsigned int seed,
 
                   if (var->hash == v->hash)
                     {
-#if 0
+                      printf("Likely duplicate variant!\n");
                       unsigned int seq1len, seq2len;
                       generate_variant_sequence(sequence,
                                                 seqlen,
@@ -207,9 +227,9 @@ void check_variants(unsigned int seed,
 
                       if ((seq1len == seq2len) &&
                           ! memcmp(seq1, seq2, seq1len))
-#endif
                         {
                           /* we have a true duplicate variant */
+                          printf("Real duplicate variant!\n");
                           dup = true;
                           break;
                         }
@@ -220,22 +240,10 @@ void check_variants(unsigned int seed,
               xfree(seq2);
             }
 
-#endif
-          if (dup)
-            {
-#if 0
-              printf("Real duplicate!\n");
-#endif
-            }
-          else
+          if (!dup)
             find_variant_matches(seed, var, sample_hits, bloom_d);
         }
     }
-
-#if 1
-  bloom_exit(bloom_d);
-#endif
-
 }
 
 void sim_thread(int64_t t)
@@ -250,33 +258,68 @@ void sim_thread(int64_t t)
   double * sample_hits = static_cast<double *>
     (xmalloc(set2_samples * sizeof(double)));
 
+  double * sample_matrix_local = static_cast<double *>
+    (xmalloc(set1_samples * set2_samples * sizeof(double)));
+
+  for(uint64_t k = 0; k < set1_samples * set2_samples; k++)
+    sample_matrix_local[k] = 0;
+
+#ifdef AVOID_DUPLICATES
+  /* init bloom filter for duplicates */
+  uint64_t bloomsize = 1;
+  while (bloomsize < maxvar)
+    bloomsize *= 2;
+  struct bloom_s * bloom_d = bloom_init(bloomsize);
+#endif
+
   pthread_mutex_lock(&network_mutex);
+
   while (network_amp < set1_sequences)
     {
-      unsigned int seed = network_amp++;
-      progress_update(seed);
-
+      unsigned int firstseed = network_amp;
+      network_amp += CHUNK;
+      if (network_amp > set1_sequences)
+        network_amp = set1_sequences;
+      progress_update(network_amp);
       pthread_mutex_unlock(&network_mutex);
 
-      for(uint64_t j = 0; j < set2_samples; j++)
-        sample_hits[j] = 0;
+      unsigned int chunksize = network_amp - firstseed;
 
-      check_variants(seed, variant_list, sample_hits);
-      uint64_t i = db_getsampleno(d, seed);
+      /* process chunksize sequences starting at seed */
+      for (unsigned int z = 0; z < chunksize; z++)
+        {
+          unsigned int seed = firstseed + z;
+          uint64_t i = db_getsampleno(d, seed);
+          double f = db_get_freq(d, seed);
 
-      pthread_mutex_lock(&network_mutex);
+          for(uint64_t j = 0; j < set2_samples; j++)
+            sample_hits[j] = 0;
 
-      double f = db_get_freq(d, seed);
-
-      for(uint64_t j = 0; j < set2_samples; j++)
-        sample_matrix[set2_samples * i + j] += sample_hits[j] * f;
-
-#ifdef COUNTMATCHES
-      printf("matches: %" PRIu64 "\n", matches);
+#ifdef AVOID_DUPLICATES
+          process_variants_avoid_duplicates(seed, variant_list, sample_hits, bloom_d);
+#else
+          process_variants(seed, variant_list, sample_hits);
 #endif
+          uint64_t base = set2_samples * i;
+          for(uint64_t j = 0; j < set2_samples; j++)
+            sample_matrix_local[base + j] += sample_hits[j] * f;
+        }
+
+      /* lock mutex and update global sample_matrix */
+      pthread_mutex_lock(&network_mutex);
     }
+
+  /* update global sample_matrix */
+  for(uint64_t k = 0; k < set1_samples * set2_samples; k++)
+    sample_matrix[k] += sample_matrix_local[k];
+
   pthread_mutex_unlock(&network_mutex);
 
+#ifdef AVOID_DUPLICATES
+  bloom_exit(bloom_d);
+#endif
+
+  xfree(sample_matrix_local);
   xfree(sample_hits);
   xfree(variant_list);
 }
@@ -285,7 +328,7 @@ void overlap(char * set1_filename, char * set2_filename)
 {
   /* find overlaps between repertoires of samples */
 
-  fprintf(logfile, "Immune receptor repertoire set 1 in file %s\n", set1_filename);
+  fprintf(logfile, "Immune receptor repertoire set 1\n");
 
   d = db_create();
   db_read(d, set1_filename);
@@ -326,25 +369,35 @@ void overlap(char * set1_filename, char * set2_filename)
         set1_compare_by_sample_name);
 
   /* list of samples in set 1 */
+
   fprintf(logfile, "#no\tseqs\tfreq\tsample\n");
   uint64_t sum_size = 0;
   double sum_freq = 0.0;
   for (unsigned int i = 0; i < set1_samples; i++)
     {
       unsigned int s = set1_lookup_sample[i];
-      fprintf(logfile, "%u\t%" PRIu64 "\t%.5lf\t%s\n",
-              i+1,
-              set1_sample_size[s],
-              set1_sample_freq[s],
-              db_getsamplename(d, s));
+      if (opt_ignore_frequency)
+        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.0lf\t%s\n",
+                i+1,
+                set1_sample_size[s],
+                set1_sample_freq[s],
+                db_getsamplename(d, s));
+      else
+        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.5lf\t%s\n",
+                i+1,
+                set1_sample_size[s],
+                set1_sample_freq[s],
+                db_getsamplename(d, s));
       sum_size += set1_sample_size[s];
       sum_freq += set1_sample_freq[s];
     }
-  fprintf(logfile, "Sum\t%" PRIu64 "\t%.5lf\n", sum_size, sum_freq);
-
+  if (opt_ignore_frequency)
+    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.0lf\n", sum_size, sum_freq);
+  else
+    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.5lf\n", sum_size, sum_freq);
   fprintf(logfile, "\n");
 
-  fprintf(logfile, "Immune receptor repertoire set 2 in file %s\n", set2_filename);
+  fprintf(logfile, "Immune receptor repertoire set 2\n");
 
   d2 = db_create();
   db_read(d2, set2_filename);
@@ -392,16 +445,25 @@ void overlap(char * set1_filename, char * set2_filename)
   for (unsigned int j = 0; j < set2_samples; j++)
     {
       unsigned int t = set2_lookup_sample[j];
-      fprintf(logfile, "%u\t%" PRIu64 "\t%.5lf\t%s\n",
-              j+1,
-              set2_sample_size[t],
-              set2_sample_freq[t],
-              db_getsamplename(d2, t));
+      if (opt_ignore_frequency)
+        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.0lf\t%s\n",
+                j+1,
+                set2_sample_size[t],
+                set2_sample_freq[t],
+                db_getsamplename(d2, t));
+      else
+        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.5lf\t%s\n",
+                j+1,
+                set2_sample_size[t],
+                set2_sample_freq[t],
+                db_getsamplename(d2, t));
       sum_size += set2_sample_size[t];
       sum_freq += set2_sample_freq[t];
     }
-  fprintf(logfile, "Sum\t%" PRIu64 "\t%.5lf\n", sum_size, sum_freq);
-
+  if (opt_ignore_frequency)
+    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.0lf\n", sum_size, sum_freq);
+  else
+    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.5lf\n", sum_size, sum_freq);
   fprintf(logfile, "\n");
 
   unsigned int overall_longest = MAX(set1_longestsequence,
@@ -448,10 +510,18 @@ void overlap(char * set1_filename, char * set2_filename)
 
   pthread_mutex_init(&network_mutex, nullptr);
   progress_init("Analysing:        ", set1_sequences);
-  ThreadRunner * sim_tr = new ThreadRunner(static_cast<int>(opt_threads),
-                                           sim_thread);
-  sim_tr->run();
-  delete sim_tr;
+
+  if (opt_threads == 1)
+    {
+      sim_thread(0);
+    }
+  else
+    {
+      ThreadRunner * sim_tr = new ThreadRunner(static_cast<int>(opt_threads),
+                                               sim_thread);
+      sim_tr->run();
+      delete sim_tr;
+    }
   pthread_mutex_destroy(&network_mutex);
   progress_done();
 
@@ -489,5 +559,4 @@ void overlap(char * set1_filename, char * set2_filename)
 
   db_free(d);
   db_free(d2);
-
 }

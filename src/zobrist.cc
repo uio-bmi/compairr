@@ -79,7 +79,9 @@ uint64_t zobrist_hash(unsigned char * s,
   /* compute the Zobrist hash function of sequence s of length len. */
   /* len is the actual number of residues in the sequence */
 
-  uint64_t z = zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
+  uint64_t z = 0;
+  if (! opt_ignore_genes)
+    z ^= zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
   for (unsigned int p = 0; p < len; p++)
     z ^= zobrist_value(p, s[p]);
   return z;
@@ -93,7 +95,9 @@ uint64_t zobrist_hash_delete_first(unsigned char * s,
   /* compute the Zobrist hash function of sequence s,
      but delete the first base */
 
-  uint64_t z = zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
+  uint64_t z = 0;
+  if (! opt_ignore_genes)
+    z ^= zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
   for(unsigned int p = 1; p < len; p++)
     z ^= zobrist_value(p - 1, s[p]);
   return z;
@@ -107,7 +111,9 @@ uint64_t zobrist_hash_delete_first_two(unsigned char * s,
   /* compute the Zobrist hash function of sequence s,
      but delete the first two bases */
 
-  uint64_t z = zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
+  uint64_t z = 0;
+  if (! opt_ignore_genes)
+    z ^= zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
   for(unsigned int p = 2; p < len; p++)
     z ^= zobrist_value(p - 2, s[p]);
   return z;
@@ -121,7 +127,9 @@ uint64_t zobrist_hash_insert_first(unsigned char * s,
   /* compute the Zobrist hash function of sequence s,
      but insert a gap (no value) before the first base */
 
-  uint64_t z = zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
+  uint64_t z = 0;
+  if (! opt_ignore_genes)
+    z ^= zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
   for(unsigned int p = 0; p < len; p++)
     z ^= zobrist_value(p + 1, s[p]);
   return z;
@@ -135,7 +143,9 @@ uint64_t zobrist_hash_insert_first_two(unsigned char * s,
   /* compute the Zobrist hash function of sequence s,
      but insert two gaps (no value) before the first base */
 
-  uint64_t z = zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
+  uint64_t z = 0;
+  if (! opt_ignore_genes)
+    z ^= zobrist_v_base[v_gene] ^ zobrist_d_base[d_gene];
   for(unsigned int p = 0; p < len; p++)
     z ^= zobrist_value(p + 2, s[p]);
   return z;
