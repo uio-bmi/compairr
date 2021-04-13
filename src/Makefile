@@ -48,12 +48,13 @@ endif
 # Machine specific
 MACHINE = $(shell uname -m)
 ifeq ($(MACHINE), x86_64)
-	COMMON += -march=x86-64 -mtune=generic -std=c++11
+	COMMON += -march=x86-64 -mtune=generic
+else ifeq ($(MACHINE), arm64)
+	COMMON += -march=armv8-a+simd -mtune=generic
 else ifeq ($(MACHINE), aarch64)
-	COMMON += -march=armv8-a+simd -mtune=generic \
-	          -flax-vector-conversions -std=c++11
+	COMMON += -march=armv8-a+simd -mtune=generic
 else ifeq ($(MACHINE), ppc64le)
-	COMMON += -mcpu=power8 -std=gnu++11
+	COMMON += -mcpu=power8
 endif
 
 # OS specific
