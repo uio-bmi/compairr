@@ -1,36 +1,51 @@
 # vdjsearch
 
 The command line tool `vdjsearch` can be used to compare two sets of
-immune receptor repertoires. Each set can contain many samples (~1000)
-and each sample can contain many sequences (~100000).
+immune receptor repertoires. Each set can contain many repertoires
+(~1000) and each repertoire can contain many sequences (~100000).
 
 The tool will find the sequences in the two sets that are similar and
 output a matrix with results.
 
 The user can specify whether 0, 1 or 2 differences are allowed when
-comparing sequences, and whether indels (insertions or deletions) are
-allowed or only substitutions.  By default, just a single substitution
-is allowed.
+comparing sequences, using the option -d or --differences. To allow
+indels (insertions or deletions) the option -i or --indels may be
+specified, otherwize only substitutions are allowed.  By default, no
+differences are allowed.
 
-The V and J genes specified for each sequence must also match.
+The V and J genes specified for each sequence must also match, unless
+the -g or --ignore-genes option is in effect.
 
 The similar sequences of each sample in each set are found.  Their
 frequencies is taken into account and a matrix is output containing a
 value for each combination of samples in the two sets. The value is
 the sum of the products of the frequency of the two sequences that
-match in the two samples.
+match in the two samples. If the option -f or --ignore-frequency is
+specified, the frequency information is ignored and all frequencies
+set to 1.0.
 
-There are probably some bugs in the code, especially when 2
-differences and indels are allowed.
+There is a bug in the code affecting the case when 2 differences and
+indels are allowed at the same time. That combination is therefore
+currently disabled and it is probably not useful anyway.
 
-The code is multi-threaded, but perhaps not very efficient on many
-threads yet.
+The code is multi-threaded. The number of threads may be specified
+with the -t or --threads option.
+
+Run the program with -v or --version for version information.
+
+Use the -h or --help option to show some help information.
+
+While the program is running it will print some status and progress
+information to standard error (stderr) unless a log file has been
+specified with the -l og --log option.
 
 
 ## Input files
 
 For each of the two repertoires there must an input file of
-tab-separated values.  One line per sequence. The five columns are:
+tab-separated values. The two input files are specified on the command
+line without any preceeding option letter.  The files must contain one
+line per sequence. The five columns are:
 
 1. Amino acid sequence (single letter code)
 2. Frequency (floating point number, exponent allowed)
@@ -38,7 +53,8 @@ tab-separated values.  One line per sequence. The five columns are:
 4. J gene name
 5. Sample name
 
-See below for an example. The program is currently a bit picky on the input.
+See below for an example. The program is currently a bit picky on the
+input.
 
 
 ## Output file
@@ -48,17 +64,23 @@ containing the output matrix. The first line contains the text
 "#sample" followed by the sample names in the second set. The
 following lines contains the sample name in the first set, followed by
 the values corresponding to the comparison of this sample with each of
-the samples in the second set.
+the samples in the second set. The output is written to standard out
+(stdout) unless a file name has been specified with the -o or
+--output-file option.
 
 
 ## Command line options
 
 ```
+vdjsearch 0.0.3 - Immune repertoire analysis
+
 Usage: vdjsearch [OPTIONS] TSVFILE1 TSVFILE2
 
 General options:
- -d, --differences INTEGER           number (0-2) of differences accepted (1)
+ -d, --differences INTEGER           number (0-2) of differences accepted (0)
  -i, --indels                        allow insertions or deletions (no)
+ -f, --ignore-frequency              ignore frequency / read count information
+ -g, --ignore-genes                  ignore V and J gene information
  -h, --help                          display this help and exit
  -t, --threads INTEGER               number of threads to use (1)
  -v, --version                       display version information and exit
@@ -67,6 +89,7 @@ Input/output options:
  -l, --log FILENAME                  log to file, not to stderr
  -o, --output-file FILENAME          output results to file (stdout)
 ```
+
 
 ## Example
 
@@ -92,16 +115,18 @@ We run the following command:
 Here is the output to the console:
 
 ```
-vdjsearch 0.0.2 - Immune repertoire analysis
+vdjsearch 0.0.3 - Immune repertoire analysis
 
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
+Ignore frequency:  No
+Ignore genes:      No
 Differences (d):   1
 Indels (i):        No
 Output file (o):   output.tsv
 Threads: (t)       1
 
-Immune receptor repertoire set 1 in file seta.tsv
+Immune receptor repertoire set 1
 Reading sequences: 100%
 Sequences: 2, residues: 25, shortest: 11, longest: 14, average: 12.5
 Samples:           2
@@ -109,11 +134,11 @@ Indexing:          100%
 Sorting:           100%
 
 #no	seqs	freq	sample
-1	1	0.01000	A1
-2	1	0.03000	A2
+1	      1	0.01000	A1
+2	      1	0.03000	A2
 Sum	2	0.04000
 
-Immune receptor repertoire set 2 in file setb.tsv
+Immune receptor repertoire set 2
 Reading sequences: 100%
 Sequences: 3, residues: 39, shortest: 11, longest: 14, average: 13.0
 Samples:           2
@@ -121,8 +146,8 @@ Indexing:          100%
 Sorting:           100%
 
 #no	seqs	freq	sample
-1	2	0.15000	B1
-2	1	0.07000	B2
+1	      2	0.15000	B1
+2	      1	0.07000	B2
 Sum	3	0.22000
 
 Unique v_genes:    2
@@ -134,7 +159,8 @@ Analysing:         100%
 
 ```
 
-The program gives some statistics on the input files after reading them.
+The program gives some statistics on the input files after reading
+them.
 
 Here is the result in the `output.tsv` file:
 
@@ -186,17 +212,13 @@ release.
 Two small repertoire sets were compared as a simple performance
 test. The first set had 14 samples and a total of 2 million
 sequences. The second set had 8 samples and a total of 1 million
-sequences. Only 1 substitution was allowed. The analysis took 63
+sequences. Only 1 substitution was allowed. The analysis took 5
 seconds on my Mac Mini M1 using 1 thread.
 
 
 ## Future plans
 
 Some potential features:
-
-* Ignore frequencies, just count the number of pairs of similar sequences.
-
-* Ignore the V and J genes.
 
 * Given a set of sequences and a repertoire, produce a table of which
 sequences are found in which sample of the repertoire.
