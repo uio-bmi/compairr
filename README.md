@@ -214,14 +214,16 @@ As a preliminary performance test, Cohort 2 ("Keck") of
 by Emerson et al. was compared to itself. It contains 120 repertoires
 with a total of 24 544 336 sequences. The timing results are shown below.
 
-Distance | Indels | Threads | Time (s) | Time (mm:ss) | Note
--------: | :----: | ------: | -------: | -----------: | ----
-0 | no  | 1 |   74 |  1.14 | Almost all time was used to read files
-1 | no  | 1 |  159 |  2.39
-1 | no  | 4 |   97 |  1.37
-1 | yes | 1 |  236 |  3.56
-1 | yes | 4 |  123 |  2.03
-2 | no  | 4 | 2871 | 48.51
+Distance | Indels | Threads | Time (s) | Time (mm:ss) | Notes
+-------: | :----: | ------: | -------: | -----------: | -----
+0 | no  | 1 |   74 |  1.14 | <sup>1</sup>
+1 | no  | 1 |  159 |  2.39 |
+1 | no  | 4 |   97 |  1.37 |
+1 | yes | 1 |  236 |  3.56 |
+1 | yes | 4 |  123 |  2.03 |
+2 | no  | 4 | 2871 | 48.51 |
+
+<sup>1</sup>Almost all of the time was used to read files.
 
 Memory usage was 3.44GB, corresponding to an average of about 70 bytes
 per sequence. Times are wall time measured by `/usr/bin/time`.
