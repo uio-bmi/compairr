@@ -238,7 +238,7 @@ bool check_variant(unsigned char * seed_sequence,
                    unsigned char * amp_sequence,
                    unsigned int amp_seqlen)
 {
-  return true; // just ignore the possibility
+  //return true; // just ignore the possibility
 
   /* make sure seed with given variant is really identical to amp */
   /* we know the hashes are identical */
@@ -317,6 +317,11 @@ bool check_variant(unsigned char * seed_sequence,
       break;
 
     }
+
+#if 0
+  if (!equal)
+    fatal("Hash collision!\n");
+#endif
 
   return equal;
 }

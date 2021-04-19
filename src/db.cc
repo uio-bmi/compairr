@@ -65,7 +65,7 @@ struct db
 {
   seqinfo_t * seqindex;
   uint64_t seqindex_alloc;
-  unsigned int sequences;
+  uint64_t sequences;
   unsigned int longest;
   unsigned int shortest;
   char * residues_p;
@@ -173,7 +173,7 @@ void db_read(struct db * d, const char * filename)
   if (!fgets(line, LINEALLOC, fp))
     line[0] = 0;
 
-  unsigned int lineno = 1;
+  uint64_t lineno = 1;
 
   progress_init("Reading sequences:", static_cast<uint64_t>(filesize));
 
@@ -221,7 +221,7 @@ void db_read(struct db * d, const char * filename)
 
       if (! (aa_seq && freq_s && v_gene && d_gene && sample))
         {
-          fprintf(stderr, "Missing data on line: %d\n", lineno);
+          fprintf(stderr, "Missing data on line: %" PRIu64 "\n", lineno);
           fprintf(stderr, "aa_seq: %s freq: %s v_gene: %s d_gene: %s sample: %s\n",
                  aa_seq, freq_s, v_gene, d_gene, sample);
           fatal("fatal");
@@ -257,12 +257,12 @@ void db_read(struct db * d, const char * filename)
             {
               if ((c >= 32) && (c <= 126))
                 fprintf(stderr,
-                        "\nError: Illegal character '%c' in sequence on line %u\n",
+                        "\nError: Illegal character '%c' in sequence on line %" PRIu64 "\n",
                         c,
                         lineno);
               else
                 fprintf(stderr,
-                        "\nError: Illegal character (ascii no %d) in sequence on line %u\n",
+                        "\nError: Illegal character (ascii no %d) in sequence on line %" PRIu64 "\n",
                         c,
                         lineno);
               exit(1);
@@ -314,7 +314,7 @@ void db_read(struct db * d, const char * filename)
   fclose(fp);
 
   fprintf(logfile,
-          "Sequences: %u, residues: %" PRIu64 ", shortest: %u, longest: %u, average: %4.1lf\n",
+          "Sequences: %" PRIu64 ", residues: %" PRIu64 ", shortest: %u, longest: %u, average: %4.1lf\n",
           d->sequences,
           d->residues_count,
           d->shortest,
@@ -367,7 +367,7 @@ void db_free(struct db * d)
   xfree(d);
 }
 
-unsigned int db_getsequencecount(struct db * d)
+uint64_t db_getsequencecount(struct db * d)
 {
   return d->sequences;
 }

@@ -47,8 +47,8 @@ struct hashtable_s * hash_init(uint64_t sequences)
   ht->hash_values = static_cast<uint64_t *>
     (xmalloc(ht->hash_tablesize * sizeof(uint64_t)));
 
-  ht->hash_data = static_cast<unsigned int *>
-    (xmalloc(ht->hash_tablesize * sizeof(unsigned int)));
+  ht->hash_data = static_cast<uint64_t *>
+    (xmalloc(ht->hash_tablesize * sizeof(uint64_t)));
 
   return ht;
 }

@@ -33,7 +33,7 @@ void db_free(struct db * d);
 
 void db_read(struct db * d, const char * filename);
 
-unsigned int db_getsequencecount(struct db * d);
+uint64_t db_getsequencecount(struct db * d);
 
 uint64_t db_getsamplecount(struct db * d);
 

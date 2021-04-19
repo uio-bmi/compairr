@@ -22,10 +22,10 @@
 struct hashtable_s
 {
   uint64_t hash_mask;
-  unsigned char * hash_occupied;
   uint64_t * hash_values;
-  unsigned int * hash_data;
+  uint64_t * hash_data;
   uint64_t hash_tablesize;
+  unsigned char * hash_occupied;
 };
 
 inline uint64_t hash_get_tablesize(struct hashtable_s * ht)
@@ -66,12 +66,12 @@ inline bool hash_compare_value(struct hashtable_s * ht,
   return (ht->hash_values[j] == hash);
 }
 
-inline unsigned int hash_get_data(struct hashtable_s * ht, uint64_t j)
+inline uint64_t hash_get_data(struct hashtable_s * ht, uint64_t j)
 {
   return ht->hash_data[j];
 }
 
-inline void hash_set_data(struct hashtable_s * ht, uint64_t j, unsigned int x)
+inline void hash_set_data(struct hashtable_s * ht, uint64_t j, uint64_t x)
 {
   ht->hash_data[j] = x;
 }

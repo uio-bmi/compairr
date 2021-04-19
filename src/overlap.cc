@@ -23,7 +23,7 @@
 
 static struct db * d;
 static unsigned int set1_longestsequence = 0;
-static unsigned int set1_sequences = 0;
+static uint64_t set1_sequences = 0;
 static uint64_t set1_residues = 0;
 static uint64_t set1_samples = 0;
 static uint64_t * set1_sample_size = nullptr;
@@ -31,28 +31,23 @@ static double * set1_sample_freq = nullptr;
 
 static struct db * d2;
 static unsigned int set2_longestsequence = 0;
-static unsigned int set2_sequences = 0;
+static uint64_t set2_sequences = 0;
 static uint64_t set2_residues = 0;
 static uint64_t set2_samples = 0;
 static uint64_t * set2_sample_size = nullptr;
 static double * set2_sample_freq = nullptr;
 
 static pthread_mutex_t network_mutex;
-static unsigned int network_amp = 0;
+static uint64_t network_amp = 0;
 static struct bloom_s * bloom_a = nullptr; // Bloom filter for sequences
 static double * sample_matrix = nullptr;
 static hashtable_s * hashtable = nullptr;
 
-//#define COUNTMATCHES
-#ifdef COUNTMATCHES
-static uint64_t matches = 0;
-#endif
-
 //#define AVOID_DUPLICATES 1
 
-const unsigned int CHUNK = 1000;
+const uint64_t CHUNK = 1000;
 
-inline void hash_insert(unsigned int amp)
+inline void hash_insert(uint64_t amp)
 {
   /* set 2 */
   /* find the first empty bucket */
@@ -81,9 +76,9 @@ int set2_compare_by_sample_name(const void * a, const void * b)
   return strcmp(db_getsamplename(d2, *x), db_getsamplename(d2, *y));
 }
 
-void find_variant_matches(unsigned int seed,
+void find_variant_matches(uint64_t seed,
                           var_s * var,
-                          double * sample_hits,
+                          double * sample_matrix,
                           struct bloom_s * bloom_d)
 {
   /* seed in set 1, amp in set 2 */
@@ -98,7 +93,7 @@ void find_variant_matches(unsigned int seed,
     {
       if (hash_compare_value(hashtable, j, var->hash))
         {
-          unsigned int amp = hash_get_data(hashtable, j);
+          uint64_t amp = hash_get_data(hashtable, j);
 
           /* double check that everything matches */
 
@@ -124,12 +119,11 @@ void find_variant_matches(unsigned int seed,
                                 var,
                                 amp_sequence, amp_seqlen))
                 {
+                  unsigned int i = db_getsampleno(d, seed);
+                  unsigned int j = db_getsampleno(d2, amp);
+                  double f = db_get_freq(d, seed);
                   double g = db_get_freq(d2, amp);
-                  sample_hits[db_getsampleno(d2, amp)] += g;
-
-#ifdef COUNTMATCHES
-                  matches++;
-#endif
+                  sample_matrix[set2_samples * i + j] += f * g;
 
                   if (bloom_d)
                     bloom_set(bloom_d, var->hash);
@@ -140,9 +134,9 @@ void find_variant_matches(unsigned int seed,
     }
 }
 
-void process_variants(unsigned int seed,
+void process_variants(uint64_t seed,
                       var_s * variant_list,
-                      double * sample_hits)
+                      double * sample_matrix)
 {
   unsigned int variant_count = 0;
   unsigned char * sequence = (unsigned char *) db_getsequence(d, seed);
@@ -160,14 +154,14 @@ void process_variants(unsigned int seed,
       var_s * var = variant_list + i;
       if (bloom_get(bloom_a, var->hash))
         {
-          find_variant_matches(seed, var, sample_hits, nullptr);
+          find_variant_matches(seed, var, sample_matrix, nullptr);
         }
     }
 }
 
-void process_variants_avoid_duplicates(unsigned int seed,
+void process_variants_avoid_duplicates(uint64_t seed,
                                        var_s * variant_list,
-                                       double * sample_hits,
+                                       double * sample_matrix,
                                        struct bloom_s * bloom_d)
 {
   unsigned int variant_count = 0;
@@ -241,7 +235,7 @@ void process_variants_avoid_duplicates(unsigned int seed,
             }
 
           if (!dup)
-            find_variant_matches(seed, var, sample_hits, bloom_d);
+            find_variant_matches(seed, var, sample_matrix, bloom_d);
         }
     }
 }
@@ -254,9 +248,6 @@ void sim_thread(int64_t t)
 
   struct var_s * variant_list = static_cast<struct var_s *>
     (xmalloc(maxvar * sizeof(struct var_s)));
-
-  double * sample_hits = static_cast<double *>
-    (xmalloc(set2_samples * sizeof(double)));
 
   double * sample_matrix_local = static_cast<double *>
     (xmalloc(set1_samples * set2_samples * sizeof(double)));
@@ -276,33 +267,25 @@ void sim_thread(int64_t t)
 
   while (network_amp < set1_sequences)
     {
-      unsigned int firstseed = network_amp;
+      uint64_t firstseed = network_amp;
       network_amp += CHUNK;
       if (network_amp > set1_sequences)
         network_amp = set1_sequences;
       progress_update(network_amp);
       pthread_mutex_unlock(&network_mutex);
 
-      unsigned int chunksize = network_amp - firstseed;
+      uint64_t chunksize = network_amp - firstseed;
 
       /* process chunksize sequences starting at seed */
-      for (unsigned int z = 0; z < chunksize; z++)
+      for (uint64_t z = 0; z < chunksize; z++)
         {
-          unsigned int seed = firstseed + z;
-          uint64_t i = db_getsampleno(d, seed);
-          double f = db_get_freq(d, seed);
-
-          for(uint64_t j = 0; j < set2_samples; j++)
-            sample_hits[j] = 0;
+          uint64_t seed = firstseed + z;
 
 #ifdef AVOID_DUPLICATES
-          process_variants_avoid_duplicates(seed, variant_list, sample_hits, bloom_d);
+          process_variants_avoid_duplicates(seed, variant_list, sample_matrix_local, bloom_d);
 #else
-          process_variants(seed, variant_list, sample_hits);
+          process_variants(seed, variant_list, sample_matrix_local);
 #endif
-          uint64_t base = set2_samples * i;
-          for(uint64_t j = 0; j < set2_samples; j++)
-            sample_matrix_local[base + j] += sample_hits[j] * f;
         }
 
       /* lock mutex and update global sample_matrix */
@@ -320,7 +303,6 @@ void sim_thread(int64_t t)
 #endif
 
   xfree(sample_matrix_local);
-  xfree(sample_hits);
   xfree(variant_list);
 }
 
@@ -350,7 +332,7 @@ void overlap(char * set1_filename, char * set2_filename)
     (xmalloc(sizeof(double) * set1_samples));
   for (unsigned int s = 0; s < set1_samples ; s++)
     set1_sample_freq[s] = 0.0;
-  for (unsigned int i = 0; i < set1_sequences ; i++)
+  for (uint64_t i = 0; i < set1_sequences ; i++)
     {
       unsigned int s = db_getsampleno(d, i);
       set1_sample_size[s]++;
@@ -360,7 +342,7 @@ void overlap(char * set1_filename, char * set2_filename)
   /* set 1 : sort samples alphanumerically for display */
 
   unsigned int * set1_lookup_sample =
-    (unsigned int *) xmalloc(sizeof(uint64_t) * set1_samples);
+    (unsigned int *) xmalloc(sizeof(unsigned int) * set1_samples);
   for (unsigned int i = 0; i < set1_samples; i++)
     set1_lookup_sample[i] = i;
   qsort(set1_lookup_sample,
@@ -419,7 +401,7 @@ void overlap(char * set1_filename, char * set2_filename)
     (xmalloc(sizeof(double) * set2_samples));
   for (unsigned int t = 0; t < set2_samples ; t++)
     set2_sample_freq[t] = 0.0;
-  for (unsigned int j = 0; j < set2_sequences ; j++)
+  for (uint64_t j = 0; j < set2_sequences ; j++)
     {
       unsigned int t = db_getsampleno(d2, j);
       set2_sample_size[t]++;
@@ -429,7 +411,7 @@ void overlap(char * set1_filename, char * set2_filename)
   /* set 2 : sort samples alphanumerically for display */
 
   unsigned int * set2_lookup_sample =
-    (unsigned int *) xmalloc(sizeof(uint64_t) * set2_samples);
+    (unsigned int *) xmalloc(sizeof(unsigned int) * set2_samples);
   for (unsigned int j = 0; j < set2_samples; j++)
     set2_lookup_sample[j] = j;
   qsort(set2_lookup_sample,
@@ -491,7 +473,7 @@ void overlap(char * set1_filename, char * set2_filename)
   hashtable = hash_init(set2_sequences);
   bloom_a = bloom_init(hash_get_tablesize(hashtable) * 2);
   progress_init("Hashing sequences:", set2_sequences);
-  for(unsigned int i=0; i < set2_sequences; i++)
+  for(uint64_t i=0; i < set2_sequences; i++)
     {
       hash_insert(i);
       progress_update(i);
@@ -540,7 +522,7 @@ void overlap(char * set1_filename, char * set2_filename)
       for (unsigned int j = 0; j < set2_samples; j++)
         {
           unsigned int t = set2_lookup_sample[j];
-          fprintf(outfile, "\t%7.1le", sample_matrix[set2_samples * s + t]);
+          fprintf(outfile, "\t%15.9le", sample_matrix[set2_samples * s + t]);
         }
       fprintf(outfile, "\n");
     }
