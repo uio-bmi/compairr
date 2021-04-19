@@ -113,6 +113,7 @@ const int alphabet_size = 20;
 
 /* common data */
 
+extern bool opt_alternative;
 extern bool opt_help;
 extern bool opt_ignore_frequency;
 extern bool opt_ignore_genes;

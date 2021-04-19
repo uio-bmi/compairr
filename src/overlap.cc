@@ -511,20 +511,39 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /* dump similarity matrix */
 
-  fprintf(outfile, "#sample");
-  for (unsigned int j = 0; j < set2_samples; j++)
-    fprintf(outfile, "\t%s", db_getsamplename(d2, set2_lookup_sample[j]));
-  fprintf(outfile, "\n");
-  for (unsigned int i = 0; i < set1_samples; i++)
+  if (opt_alternative)
     {
-      unsigned int s = set1_lookup_sample[i];
-      fprintf(outfile, "%s", db_getsamplename(d, s));
-      for (unsigned int j = 0; j < set2_samples; j++)
+      for (unsigned int i = 0; i < set1_samples; i++)
         {
-          unsigned int t = set2_lookup_sample[j];
-          fprintf(outfile, "\t%15.9le", sample_matrix[set2_samples * s + t]);
+          unsigned int s = set1_lookup_sample[i];
+          for (unsigned int j = 0; j < set2_samples; j++)
+            {
+              unsigned int t = set2_lookup_sample[j];
+              fprintf(outfile,
+                      "%s\t%s\t%15.9le\n",
+                      db_getsamplename(d, s),
+                      db_getsamplename(d2, t),
+                      sample_matrix[set2_samples * s + t]);
+            }
         }
+    }
+  else
+    {
+      fprintf(outfile, "#sample");
+      for (unsigned int j = 0; j < set2_samples; j++)
+        fprintf(outfile, "\t%s", db_getsamplename(d2, set2_lookup_sample[j]));
       fprintf(outfile, "\n");
+      for (unsigned int i = 0; i < set1_samples; i++)
+        {
+          unsigned int s = set1_lookup_sample[i];
+          fprintf(outfile, "%s", db_getsamplename(d, s));
+          for (unsigned int j = 0; j < set2_samples; j++)
+            {
+              unsigned int t = set2_lookup_sample[j];
+              fprintf(outfile, "\t%15.9le", sample_matrix[set2_samples * s + t]);
+            }
+          fprintf(outfile, "\n");
+        }
     }
 
   bloom_exit(bloom_a);

@@ -46,6 +46,7 @@ static char * progname;
 static char * input1_filename;
 static char * input2_filename;
 
+bool opt_alternative;
 bool opt_help;
 bool opt_ignore_frequency;
 bool opt_ignore_genes;
@@ -90,13 +91,14 @@ void args_show()
 {
   fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
   fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename);
-  fprintf(logfile, "Ignore frequency:  %s\n",
-          opt_ignore_frequency ? "Yes" : "No");
-  fprintf(logfile, "Ignore genes:      %s\n",
-          opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
+  fprintf(logfile, "Ignore freq. (f):  %s\n",
+          opt_ignore_frequency ? "Yes" : "No");
+  fprintf(logfile, "Ignore genes (g):  %s\n",
+          opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Output file (o):   %s\n", opt_output_file);
+  fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix" );
   fprintf(logfile, "Threads: (t)       %" PRId64 "\n", opt_threads);
 }
 
@@ -105,17 +107,18 @@ void args_usage()
   fprintf(stderr, "Usage: %s [OPTIONS] TSVFILE1 TSVFILE2\n", PROG_NAME);
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
-  fprintf(stderr, " -d, --differences INTEGER           number (0-2) of differences accepted (0)\n");
-  fprintf(stderr, " -i, --indels                        allow insertions or deletions (no)\n");
-  fprintf(stderr, " -f, --ignore-frequency              ignore frequency / read count information\n");
-  fprintf(stderr, " -g, --ignore-genes                  ignore V and J gene information\n");
-  fprintf(stderr, " -h, --help                          display this help and exit\n");
-  fprintf(stderr, " -t, --threads INTEGER               number of threads to use (1)\n");
-  fprintf(stderr, " -v, --version                       display version information and exit\n");
+  fprintf(stderr, " -d, --differences INTEGER   number (0-2) of differences accepted (0)\n");
+  fprintf(stderr, " -i, --indels                allow insertions or deletions (no)\n");
+  fprintf(stderr, " -f, --ignore-frequency      ignore frequency / read count information\n");
+  fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
+  fprintf(stderr, " -h, --help                  display this help and exit\n");
+  fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
+  fprintf(stderr, " -v, --version               display version information and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
-  fprintf(stderr, " -l, --log FILENAME                  log to file, not to stderr\n");
-  fprintf(stderr, " -o, --output-file FILENAME          output results to file (stdout)\n");
+  fprintf(stderr, " -a, --alternative           output results in column format (no)\n");
+  fprintf(stderr, " -l, --log FILENAME          log to file, not to stderr\n");
+  fprintf(stderr, " -o, --output-file FILENAME  output results to file (stdout)\n");
   fprintf(stderr, "\n");
 }
 
@@ -136,6 +139,7 @@ void args_init(int argc, char **argv)
   input1_filename = 0;
   input2_filename = 0;
 
+  opt_alternative = 0;
   opt_differences = 0;
   opt_ignore_frequency = 0;
   opt_ignore_genes = 0;
@@ -148,12 +152,13 @@ void args_init(int argc, char **argv)
 
   opterr = 1;
 
-  char short_options[] = "d:fghil:o:t:v";
+  char short_options[] = "ad:fghil:o:t:v";
 
-  /* unused short option letters: abcejkmnpqrsuwxyz */
+  /* unused short option letters: bcejkmnpqrsuwxyz */
 
   static struct option long_options[] =
   {
+    {"alternative",           no_argument,       nullptr, 'a' },
     {"differences",           required_argument, nullptr, 'd' },
     {"ignore-frequency",      no_argument,       nullptr, 'f' },
     {"ignore-genes",          no_argument,       nullptr, 'g' },
@@ -163,7 +168,7 @@ void args_init(int argc, char **argv)
     {"output-file",           required_argument, nullptr, 'o' },
     {"threads",               required_argument, nullptr, 't' },
     {"version",               no_argument,       nullptr, 'v' },
-    {nullptr,                 0,                 nullptr, 0 }
+    {nullptr,                 0,                 nullptr, 0   }
   };
 
   int used_options[26] = { 0, 0, 0, 0, 0,
@@ -205,6 +210,11 @@ void args_init(int argc, char **argv)
 
     switch(c)
       {
+      case 'a':
+        /* alternative */
+        opt_alternative = 1;
+        break;
+
       case 'd':
         /* differences */
         opt_differences = args_long(optarg, "-d or --differences");
