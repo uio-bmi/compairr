@@ -87,7 +87,7 @@ specified.
 The output will be in a similar format as the input file, but preceeded
 with two additional columns. The first column will contain a cluster
 number, starting at 1. The second column will contain the size of the
-cluster.
+cluster. The clusters are sorted by size, in descending order.
 
 
 ## Input files
