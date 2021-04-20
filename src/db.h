@@ -27,6 +27,10 @@ struct db;
 
 /* functions in db.cc */
 
+void db_init();
+
+void db_exit();
+
 struct db * db_create();
 
 void db_free(struct db * d);
@@ -49,7 +53,7 @@ uint64_t db_gethash(struct db * d, uint64_t seqno);
 
 uint64_t db_get_v_gene(struct db * d, uint64_t seqno);
 
-uint64_t db_get_d_gene(struct db * d, uint64_t seqno);
+uint64_t db_get_j_gene(struct db * d, uint64_t seqno);
 
 double db_get_freq(struct db * d, uint64_t seqno);
 
@@ -61,4 +65,10 @@ void db_hash(struct db * d);
 
 uint64_t db_get_v_gene_count();
 
-uint64_t db_get_d_gene_count();
+uint64_t db_get_j_gene_count();
+
+char * db_get_v_gene_name(struct db * d, uint64_t seqno);
+
+char * db_get_j_gene_name(struct db * d, uint64_t seqno);
+
+void db_fprint_sequence(FILE * f, struct db * d, uint64_t seqno);

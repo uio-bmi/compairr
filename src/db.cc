@@ -48,6 +48,8 @@ static signed char map_aa[256] =
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
   };
 
+const static char * aa_chars = "ACDEFGHIKLMNPQRSTVWY";
+
 struct seqinfo_s
 {
   uint64_t hash;
@@ -55,7 +57,7 @@ struct seqinfo_s
   short seqlen;
   unsigned int sample_no;
   short v_gene_no;
-  short d_gene_no;
+  short j_gene_no;
   double freq;
 };
 
@@ -76,12 +78,32 @@ struct db
   uint64_t sample_count;
 };
 
-static char * * v_gene_list = nullptr;
+static char * * v_gene_list = 0;
 static uint64_t v_gene_alloc = 0;
 static uint64_t v_gene_count = 0;
-static char * * d_gene_list = nullptr;
-static uint64_t d_gene_alloc = 0;
-static uint64_t d_gene_count = 0;
+static char * * j_gene_list = 0;
+static uint64_t j_gene_alloc = 0;
+static uint64_t j_gene_count = 0;
+
+void db_init()
+{
+  v_gene_list = 0;
+  v_gene_alloc = 0;
+  v_gene_count = 0;
+  j_gene_list = 0;
+  j_gene_alloc = 0;
+  j_gene_count = 0;
+}
+
+void db_exit()
+{
+  if (v_gene_list)
+    xfree(v_gene_list);
+  v_gene_list = 0;
+  if (j_gene_list)
+    xfree(j_gene_list);
+  j_gene_list = 0;
+}
 
 uint64_t list_insert(char * * * list, uint64_t * alloc, uint64_t * count, char * item)
 {
@@ -194,7 +216,7 @@ void db_read(struct db * d, const char * filename)
       char * aa_seq = NULL;
       char * freq_s = NULL;
       char * v_gene = NULL;
-      char * d_gene = NULL;
+      char * j_gene = NULL;
       char * sample = NULL;
 
       double freq = 0.0;
@@ -214,16 +236,16 @@ void db_read(struct db * d, const char * filename)
         }
 
       if (v_gene)
-        d_gene = strtok(NULL, tab);
+        j_gene = strtok(NULL, tab);
 
-      if (d_gene)
+      if (j_gene)
         sample = strtok(NULL, nl);
 
-      if (! (aa_seq && freq_s && v_gene && d_gene && sample))
+      if (! (aa_seq && freq_s && v_gene && j_gene && sample))
         {
           fprintf(stderr, "Missing data on line: %" PRIu64 "\n", lineno);
-          fprintf(stderr, "aa_seq: %s freq: %s v_gene: %s d_gene: %s sample: %s\n",
-                 aa_seq, freq_s, v_gene, d_gene, sample);
+          fprintf(stderr, "aa_seq: %s freq: %s v_gene: %s j_gene: %s sample: %s\n",
+                 aa_seq, freq_s, v_gene, j_gene, sample);
           fatal("fatal");
         }
 
@@ -274,10 +296,10 @@ void db_read(struct db * d, const char * filename)
                                           & v_gene_count,
                                           v_gene);
 
-      uint64_t d_gene_index = list_insert(& d_gene_list,
-                                          & d_gene_alloc,
-                                          & d_gene_count,
-                                          d_gene);
+      uint64_t j_gene_index = list_insert(& j_gene_list,
+                                          & j_gene_alloc,
+                                          & j_gene_count,
+                                          j_gene);
 
       uint64_t sample_index = list_insert(& d->sample_list,
                                           & d->sample_alloc,
@@ -287,7 +309,7 @@ void db_read(struct db * d, const char * filename)
       p->seqlen = seqlen;
       p->sample_no = sample_index;
       p->v_gene_no = v_gene_index;
-      p->d_gene_no = d_gene_index;
+      p->j_gene_no = j_gene_index;
       p->freq = freq;
       p->hash = 0;
 
@@ -314,14 +336,14 @@ void db_read(struct db * d, const char * filename)
   fclose(fp);
 
   fprintf(logfile,
-          "Sequences: %" PRIu64 ", residues: %" PRIu64 ", shortest: %u, longest: %u, average: %4.1lf\n",
+          "Sequences:         %" PRIu64 "\nResidues:          %" PRIu64 "\nShortest:          %u\nLongest:           %u\nAverage length:    %4.1lf\n",
           d->sequences,
           d->residues_count,
           d->shortest,
           d->longest,
           1.0 * d->residues_count / d->sequences);
 
-  fprintf(logfile, "Samples:           %" PRIu64 "\n", d->sample_count);
+  fprintf(logfile, "Samples:           %" PRIu64 "\n\n", d->sample_count);
 
   /* add sequence pointers to index table */
 
@@ -352,7 +374,7 @@ void db_hash(struct db * d)
       d->seqindex[i].hash = zobrist_hash((unsigned char *)(p->seq),
                                          p->seqlen,
                                          p->v_gene_no,
-                                         p->d_gene_no);
+                                         p->j_gene_no);
       progress_update(i+1);
     }
   progress_done();
@@ -407,9 +429,9 @@ uint64_t db_get_v_gene(struct db * d, uint64_t seqno)
   return d->seqindex[seqno].v_gene_no;
 }
 
-uint64_t db_get_d_gene(struct db * d, uint64_t seqno)
+uint64_t db_get_j_gene(struct db * d, uint64_t seqno)
 {
-  return d->seqindex[seqno].d_gene_no;
+  return d->seqindex[seqno].j_gene_no;
 }
 
 double db_get_freq(struct db * d, uint64_t seqno)
@@ -432,7 +454,25 @@ uint64_t db_get_v_gene_count()
   return v_gene_count;
 }
 
-uint64_t db_get_d_gene_count()
+uint64_t db_get_j_gene_count()
 {
-  return d_gene_count;
+  return j_gene_count;
+}
+
+char * db_get_v_gene_name(struct db * d, uint64_t seqno)
+{
+  return v_gene_list[d->seqindex[seqno].v_gene_no];
+}
+
+char * db_get_j_gene_name(struct db * d, uint64_t seqno)
+{
+  return j_gene_list[d->seqindex[seqno].j_gene_no];
+}
+
+void db_fprint_sequence(FILE * f, struct db * d, uint64_t seqno)
+{
+  char * seq = db_getsequence(d, seqno);
+  unsigned int len = db_getsequencelen(d, seqno);
+  for (unsigned int i = 0; i < len; i++)
+    fputc(aa_chars[(int)(seq[i])], f);
 }

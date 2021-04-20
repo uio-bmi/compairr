@@ -71,11 +71,11 @@ CXXFLAGS = $(COMMON) $(WARNINGS)
 
 PROG = vdjsearch
 
-OBJS = arch.o bloompat.o db.o hashtable.o overlap.o \
+OBJS = arch.o bloompat.o cluster.o db.o hashtable.o overlap.o \
 	util.o variants.o vdjsearch.o zobrist.o
 
 DEPS = Makefile threads.h \
-	arch.h bloompat.h db.h hashtable.h overlap.h \
+	arch.h bloompat.h cluster.h db.h hashtable.h overlap.h \
 	util.h variants.h vdjsearch.h zobrist.h
 
 all : $(PROG)

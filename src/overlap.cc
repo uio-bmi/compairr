@@ -98,13 +98,13 @@ void find_variant_matches(uint64_t seed,
           /* double check that everything matches */
 
           unsigned int seed_v_gene = db_get_v_gene(d, seed);
-          unsigned int seed_d_gene = db_get_d_gene(d, seed);
+          unsigned int seed_j_gene = db_get_j_gene(d, seed);
 
           unsigned int amp_v_gene = db_get_v_gene(d2, amp);
-          unsigned int amp_d_gene = db_get_d_gene(d2, amp);
+          unsigned int amp_j_gene = db_get_j_gene(d2, amp);
 
           if (opt_ignore_genes ||
-              ((seed_v_gene == amp_v_gene) && (seed_d_gene == amp_d_gene)))
+              ((seed_v_gene == amp_v_gene) && (seed_j_gene == amp_j_gene)))
             {
               unsigned char * seed_sequence
                 = (unsigned char *) db_getsequence(d, seed);
@@ -143,10 +143,10 @@ void process_variants(uint64_t seed,
   unsigned int seqlen = db_getsequencelen(d, seed);
   uint64_t hash = db_gethash(d, seed);
   uint64_t v_gene = db_get_v_gene(d, seed);
-  uint64_t d_gene = db_get_d_gene(d, seed);
+  uint64_t j_gene = db_get_j_gene(d, seed);
 
   generate_variants(hash,
-                    sequence, seqlen, v_gene, d_gene,
+                    sequence, seqlen, v_gene, j_gene,
                     variant_list, & variant_count);
 
   for(unsigned int i = 0; i < variant_count; i++)
@@ -169,10 +169,10 @@ void process_variants_avoid_duplicates(uint64_t seed,
   unsigned int seqlen = db_getsequencelen(d, seed);
   uint64_t hash = db_gethash(d, seed);
   uint64_t v_gene = db_get_v_gene(d, seed);
-  uint64_t d_gene = db_get_d_gene(d, seed);
+  uint64_t j_gene = db_get_j_gene(d, seed);
 
   generate_variants(hash,
-                    sequence, seqlen, v_gene, d_gene,
+                    sequence, seqlen, v_gene, j_gene,
                     variant_list, & variant_count);
 
   bloom_zap(bloom_d);
@@ -312,6 +312,7 @@ void overlap(char * set1_filename, char * set2_filename)
 
   fprintf(logfile, "Immune receptor repertoire set 1\n");
 
+  db_init();
   d = db_create();
   db_read(d, set1_filename);
 
@@ -453,13 +454,13 @@ void overlap(char * set1_filename, char * set2_filename)
 
   zobrist_init(overall_longest + 2,
                db_get_v_gene_count(),
-               db_get_d_gene_count());
+               db_get_j_gene_count());
 
-  fprintf(logfile, "Unique v_genes:    %" PRIu64 "\n",
+  fprintf(logfile, "Unique V genes:    %" PRIu64 "\n",
           db_get_v_gene_count());
 
-  fprintf(logfile, "Unique d_genes:    %" PRIu64 "\n",
-          db_get_d_gene_count());
+  fprintf(logfile, "Unique J genes:    %" PRIu64 "\n",
+          db_get_j_gene_count());
 
   /* compute hashes for each sequence in database */
 
@@ -480,10 +481,11 @@ void overlap(char * set1_filename, char * set2_filename)
     }
   progress_done();
 
-  /* allocate matrix of sample x sample counts */
+  /* allocate matrix of sample1 x sample2 counts */
 
   sample_matrix = static_cast<double *>
     (xmalloc(sizeof(double) * set1_samples * set2_samples));
+
   for(unsigned int s = 0; s < set1_samples; s++)
     for(unsigned int t = 0; t < set2_samples; t++)
       sample_matrix[set2_samples * s + t] = 0;
@@ -504,13 +506,14 @@ void overlap(char * set1_filename, char * set2_filename)
       sim_tr->run();
       delete sim_tr;
     }
-  pthread_mutex_destroy(&network_mutex);
-  progress_done();
 
-  fprintf(logfile, "\n");
+  progress_done();
+  pthread_mutex_destroy(&network_mutex);
 
   /* dump similarity matrix */
 
+  unsigned int x = 0;
+  progress_init("Writing results:  ", set1_sequences * set2_sequences);
   if (opt_alternative)
     {
       for (unsigned int i = 0; i < set1_samples; i++)
@@ -524,6 +527,7 @@ void overlap(char * set1_filename, char * set2_filename)
                       db_getsamplename(d, s),
                       db_getsamplename(d2, t),
                       sample_matrix[set2_samples * s + t]);
+              x++;
             }
         }
     }
@@ -541,23 +545,34 @@ void overlap(char * set1_filename, char * set2_filename)
             {
               unsigned int t = set2_lookup_sample[j];
               fprintf(outfile, "\t%15.9le", sample_matrix[set2_samples * s + t]);
+              x++;
+              progress_update(x);
             }
           fprintf(outfile, "\n");
         }
     }
+  progress_done();
+
+  fprintf(logfile, "\n");
+
+  if (sample_matrix)
+    xfree(sample_matrix);
 
   bloom_exit(bloom_a);
 
-  xfree(sample_matrix);
+  hash_exit(hashtable);
 
-  xfree(set1_sample_size);
-  xfree(set2_sample_size);
-
-  xfree(set1_lookup_sample);
-  xfree(set2_lookup_sample);
+  db_free(d2);
+  db_free(d);
+  db_exit();
 
   zobrist_exit();
 
-  db_free(d);
-  db_free(d2);
+  xfree(set2_lookup_sample);
+  xfree(set2_sample_freq);
+  xfree(set2_sample_size);
+
+  xfree(set1_lookup_sample);
+  xfree(set1_sample_freq);
+  xfree(set1_sample_size);
 }

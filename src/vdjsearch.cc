@@ -47,13 +47,15 @@ static char * input1_filename;
 static char * input2_filename;
 
 bool opt_alternative;
+bool opt_cluster;
 bool opt_help;
 bool opt_ignore_frequency;
 bool opt_ignore_genes;
 bool opt_indels;
+bool opt_matrix;
 bool opt_version;
 char * opt_log;
-char * opt_output_file;
+char * opt_output;
 int64_t opt_differences;
 int64_t opt_threads;
 
@@ -89,36 +91,42 @@ int64_t args_long(char * str, const char * option)
 
 void args_show()
 {
+  fprintf(logfile, "Command:           %s\n", opt_cluster ? "Cluster" : "Overlap");
   fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
-  fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename);
+  if (opt_matrix)
+    fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename);
   fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
   fprintf(logfile, "Ignore freq. (f):  %s\n",
           opt_ignore_frequency ? "Yes" : "No");
   fprintf(logfile, "Ignore genes (g):  %s\n",
           opt_ignore_genes ? "Yes" : "No");
-  fprintf(logfile, "Output file (o):   %s\n", opt_output_file);
-  fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix" );
+  fprintf(logfile, "Output file (o):   %s\n", opt_output);
+  fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
   fprintf(logfile, "Threads: (t)       %" PRId64 "\n", opt_threads);
 }
 
 void args_usage()
 {
-  fprintf(stderr, "Usage: %s [OPTIONS] TSVFILE1 TSVFILE2\n", PROG_NAME);
+  fprintf(stderr, "Usage: %s [OPTIONS] TSVFILE1 [TSVFILE2]\n", PROG_NAME);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Commands:\n");
+  fprintf(stderr, " -h, --help                  display this help and exit\n");
+  fprintf(stderr, " -v, --version               display version information\n");
+  fprintf(stderr, " -m, --matrix                compute overlap matrix between two sets\n");
+  fprintf(stderr, " -c, --cluster               cluster sequences in one repertoire\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
   fprintf(stderr, " -d, --differences INTEGER   number (0-2) of differences accepted (0)\n");
-  fprintf(stderr, " -i, --indels                allow insertions or deletions (no)\n");
+  fprintf(stderr, " -i, --indels                allow insertions or deletions\n");
   fprintf(stderr, " -f, --ignore-frequency      ignore frequency / read count information\n");
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
-  fprintf(stderr, " -h, --help                  display this help and exit\n");
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
-  fprintf(stderr, " -v, --version               display version information and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
-  fprintf(stderr, " -a, --alternative           output results in column format (no)\n");
-  fprintf(stderr, " -l, --log FILENAME          log to file, not to stderr\n");
-  fprintf(stderr, " -o, --output-file FILENAME  output results to file (stdout)\n");
+  fprintf(stderr, " -a, --alternative           output overlap results in column format\n");
+  fprintf(stderr, " -l, --log FILENAME          log to file (stderr)\n");
+  fprintf(stderr, " -o, --output FILENAME       output results to file (stdout)\n");
   fprintf(stderr, "\n");
 }
 
@@ -146,29 +154,31 @@ void args_init(int argc, char **argv)
   opt_help = 0;
   opt_indels = 0;
   opt_log = nullptr;
-  opt_output_file = DASH_FILENAME;
+  opt_output = DASH_FILENAME;
   opt_threads = 1;
   opt_version = 0;
 
   opterr = 1;
 
-  char short_options[] = "ad:fghil:o:t:v";
+  char short_options[] = "acd:fghil:mo:t:v";
 
-  /* unused short option letters: bcejkmnpqrsuwxyz */
+  /* unused short option letters: bejknpqrsuwxyz */
 
   static struct option long_options[] =
   {
-    {"alternative",           no_argument,       nullptr, 'a' },
-    {"differences",           required_argument, nullptr, 'd' },
-    {"ignore-frequency",      no_argument,       nullptr, 'f' },
-    {"ignore-genes",          no_argument,       nullptr, 'g' },
-    {"help",                  no_argument,       nullptr, 'h' },
-    {"indels",                no_argument,       nullptr, 'i' },
-    {"log",                   required_argument, nullptr, 'l' },
-    {"output-file",           required_argument, nullptr, 'o' },
-    {"threads",               required_argument, nullptr, 't' },
-    {"version",               no_argument,       nullptr, 'v' },
-    {nullptr,                 0,                 nullptr, 0   }
+    {"alternative",      no_argument,       nullptr, 'a' },
+    {"cluster",          no_argument,       nullptr, 'c' },
+    {"differences",      required_argument, nullptr, 'd' },
+    {"ignore-frequency", no_argument,       nullptr, 'f' },
+    {"ignore-genes",     no_argument,       nullptr, 'g' },
+    {"help",             no_argument,       nullptr, 'h' },
+    {"indels",           no_argument,       nullptr, 'i' },
+    {"log",              required_argument, nullptr, 'l' },
+    {"matrix",           no_argument,       nullptr, 'm' },
+    {"output",           required_argument, nullptr, 'o' },
+    {"threads",          required_argument, nullptr, 't' },
+    {"version",          no_argument,       nullptr, 'v' },
+    {nullptr,            0,                 nullptr, 0   }
   };
 
   int used_options[26] = { 0, 0, 0, 0, 0,
@@ -215,6 +225,11 @@ void args_init(int argc, char **argv)
         opt_alternative = 1;
         break;
 
+      case 'c':
+        /* cluster */
+        opt_cluster = 1;
+        break;
+
       case 'd':
         /* differences */
         opt_differences = args_long(optarg, "-d or --differences");
@@ -245,9 +260,14 @@ void args_init(int argc, char **argv)
         opt_log = optarg;
         break;
 
+      case 'm':
+        /* matrix */
+        opt_matrix = 1;
+        break;
+
       case 'o':
         /* output-file */
-        opt_output_file = optarg;
+        opt_output = optarg;
         break;
 
       case 't':
@@ -267,12 +287,18 @@ void args_init(int argc, char **argv)
     }
   }
 
+  int cmd_count = opt_help + opt_version + opt_matrix + opt_cluster;
+  if (cmd_count == 0)
+    fatal("Please specify a command (-h, -v, -c or -m)");
+  if (cmd_count > 1)
+    fatal("Please specify just one command (-h, -v, -c or -m)");
+
   if (opt_help || opt_version)
     {
       if (optind != argc)
         fatal("Incorrect number of arguments");
     }
-  else
+  else if (opt_matrix)
     {
       if (optind + 2 == argc)
         {
@@ -282,6 +308,17 @@ void args_init(int argc, char **argv)
       else
         {
           fatal("Incorrect number of arguments (two input files must be specified)");
+        }
+    }
+  else if (opt_cluster)
+    {
+      if (optind + 1 == argc)
+        {
+          input1_filename = argv[optind];
+        }
+      else
+        {
+          fatal("Incorrect number of arguments (one input file must be specified)");
         }
     }
 
@@ -295,10 +332,8 @@ void args_init(int argc, char **argv)
   if ((opt_differences < 0) || (opt_differences > 2))
     fatal("Differences specifed with -d or -differences must be 0, 1 or 2.");
 
-#if 1
   if (opt_indels && (opt_differences != 1))
     fatal("Indels are only allowed when d=1");
-#endif
 }
 
 void open_files()
@@ -312,7 +347,7 @@ void open_files()
         fatal("Unable to open log file for writing.");
     }
 
-  outfile = fopen_output(opt_output_file);
+  outfile = fopen_output(opt_output);
   if (! outfile)
     fatal("Unable to open output file for writing.");
 
@@ -352,7 +387,10 @@ int main(int argc, char** argv)
 
   fprintf(logfile, "\n");
 
-  overlap(input1_filename, input2_filename);
+  if (opt_matrix)
+    overlap(input1_filename, input2_filename);
+  else
+    cluster(input1_filename);
 
   close_files();
 }

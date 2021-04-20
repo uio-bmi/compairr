@@ -96,7 +96,7 @@ static_assert(INT_MAX > 32767, "Your compiler uses very short integers.");
 /* constants */
 
 #define PROG_NAME "vdjsearch"
-#define PROG_VERSION "0.0.3"
+#define PROG_VERSION "0.0.4"
 #define PROG_BRIEF "Immune repertoire analysis"
 
 const unsigned int MAX_THREADS = 256;
@@ -114,10 +114,12 @@ const int alphabet_size = 20;
 /* common data */
 
 extern bool opt_alternative;
+extern bool opt_cluster;
 extern bool opt_help;
 extern bool opt_ignore_frequency;
 extern bool opt_ignore_genes;
 extern bool opt_indels;
+extern bool opt_matrix;
 extern bool opt_version;
 extern char * opt_log;
 extern char * opt_output_file;
@@ -133,6 +135,7 @@ extern FILE * logfile;
 
 #include "arch.h"
 #include "bloompat.h"
+#include "cluster.h"
 #include "db.h"
 #include "hashtable.h"
 #include "overlap.h"

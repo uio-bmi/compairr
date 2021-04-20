@@ -1,97 +1,137 @@
 # vdjsearch
 
 The command line tool `vdjsearch` can be used to compare two sets of
-immune receptor repertoires. Each set can contain many repertoires
-(~1000) and each repertoire can contain many sequences (~100000).
+immune receptor repertoires. It can also be used to cluster the
+sequences in a repertoire.
 
-The tool will find the sequences in the two sets that are similar and
-output a matrix with results.
 
-The user can specify whether 0, 1 or 2 differences are allowed when
-comparing sequences, using the option `-d` or `--differences`. To allow
-indels (insertions or deletions) the option `-i` or `--indels` may be
-specified, otherwize only substitutions are allowed.  By default, no
-differences are allowed.
+## General options
 
-The V and J genes specified for each sequence must also match, unless
-the `-g` or `--ignore-genes` option is in effect.
+Use the `-h` or `--help` option to show some help information.
 
-The similar sequences of each sample in each set are found.  Their
-frequencies is taken into account and a matrix is output containing a
-value for each combination of samples in the two sets. The value is
-the sum of the products of the frequency of the two sequences that
-match in the two samples. If the option `-f` or `--ignore-frequency` is
-specified, the frequency information is ignored and all frequencies
-set to 1.0.
-
-There is a bug in the code affecting the case when 2 differences and
-indels are allowed at the same time. That combination is therefore
-currently disabled and it is probably not useful anyway.
+Run the program with `-v` or `--version` for version information.
 
 The code is multi-threaded. The number of threads may be specified
 with the `-t` or `--threads` option.
 
-Run the program with `-v` or `--version` for version information.
-
-Use the `-h` or `--help` option to show some help information.
+The results will be written to standard out (stdout) unless a file
+name has been specified with the `-o` or `--output-file` option.
 
 While the program is running it will print some status and progress
 information to standard error (stderr) unless a log file has been
 specified with the `-l` or `--log` option.
 
+The user can specify whether 0, 1 or 2 differences are allowed when
+comparing sequences, using the option `-d` or `--differences`. To allow
+indels (insertions or deletions) the option `-i` or `--indels` may be
+specified, otherwise only substitutions are allowed. By default, no
+differences are allowed. The `-i` option is allowed only when d=1.
+
+The V and J genes specified for each sequence must also match, unless
+the `-g` or `--ignore-genes` option is in effect.
+
+
+## Computing overlap between two repertoire sets
+
+To compute the overlap between two repertoire sets, use the `-m` or
+`--matrix` option.
+
+For each of the two repertoire sets there must an input file of
+tab-separated values. The two input files are specified on the command
+line without any preceeding option letter.
+
+Each set can contain many repertoires (~1000) and each repertoire can
+contain many sequences (~100000).
+
+The tool will find the sequences in the two sets that are similar and
+output a matrix with results.
+
+The similar sequences of each sample in each set are found by
+comparing the sequences and their V and J genes.  Their frequencies is
+taken into account and a matrix is output containing a value for each
+combination of samples in the two sets. The value is the sum of the
+products of the frequency of the two sequences that match in the two
+samples. If the option `-f` or `--ignore-frequency` is specified, the
+frequency information is ignored and all frequencies set to 1.0.
+
+The output will be a matrix of values in a tab-separated plain text
+file. Two different formats can be selected.
+
+In the default format, the first line contains the text
+"#sample" followed by the sample names in the second set. The
+following lines contains the sample name in the first set, followed by
+the values corresponding to the comparison of this sample with each of
+the samples in the second set.
+
+An alternative output format is used when the `-a` or `--alternative`
+option is specified. It will write the results in a three column
+format with the sample names from set 1 and set 2 in the two first
+columns, respectively, and the value in the third column. There will
+be one line for each combination of sample names in the sets.
+
+
+## Clustering the sequences in a repertoire
+
+To cluster the sequences in one repertoire, use the `-c` or
+`--cluster` option.
+
+One input file in the tab-separated format must be specified on the
+command line.
+
+The tool will cluster the sequences using single linkage hierarchical
+clustering, according to the specified distance and indel options
+(`-d`, `--distance`, `-i`, `--indels`). The V and J genes will be
+taken into account unless the `-g` or `--ignore-genes` option is
+specified.
+
+The output will be in a similar format as the input file, but preceeded
+with two additonal columns. The first column will contain a cluster
+number, starting at 1. The second column will contain the size of the
+cluster.
+
 
 ## Input files
 
-For each of the two repertoires there must an input file of
-tab-separated values. The two input files are specified on the command
-line without any preceeding option letter.  The files must contain one
-line per sequence. The five columns are:
+The files must contain one line per sequence. The five columns are:
 
 1. Amino acid sequence (single letter code)
 2. Frequency (floating point number, exponent allowed)
 3. V gene name
 4. J gene name
-5. Sample name
+5. Sample, repertoire or sequence name
 
 See below for an example. The program is currently a bit picky on the
 input.
 
 
-## Output file
-
-The output file is also a plain text file with tab-separated values,
-containing the output matrix. The first line contains the text
-"#sample" followed by the sample names in the second set. The
-following lines contains the sample name in the first set, followed by
-the values corresponding to the comparison of this sample with each of
-the samples in the second set. The output is written to standard out
-(stdout) unless a file name has been specified with the `-o` or
-`--output-file` option.
-
-
 ## Command line options
 
 ```
-vdjsearch 0.0.3 - Immune repertoire analysis
+vdjsearch 0.0.4 - Immune repertoire analysis
 
-Usage: vdjsearch [OPTIONS] TSVFILE1 TSVFILE2
+Usage: vdjsearch [OPTIONS] TSVFILE1 [TSVFILE2]
+
+Commands:
+ -h, --help                  display this help and exit
+ -v, --version               display version information
+ -m, --matrix                compute overlap matrix between two sets
+ -c, --cluster               cluster sequences in one repertoire
 
 General options:
- -d, --differences INTEGER           number (0-2) of differences accepted (0)
- -i, --indels                        allow insertions or deletions (no)
- -f, --ignore-frequency              ignore frequency / read count information
- -g, --ignore-genes                  ignore V and J gene information
- -h, --help                          display this help and exit
- -t, --threads INTEGER               number of threads to use (1)
- -v, --version                       display version information and exit
+ -d, --differences INTEGER   number (0-2) of differences accepted (0)
+ -i, --indels                allow insertions or deletions
+ -f, --ignore-frequency      ignore frequency / read count information
+ -g, --ignore-genes          ignore V and J gene information
+ -t, --threads INTEGER       number of threads to use (1)
 
 Input/output options:
- -l, --log FILENAME                  log to file, not to stderr
- -o, --output-file FILENAME          output results to file (stdout)
+ -a, --alternative           output overlap results in column format
+ -l, --log FILENAME          log to file (stderr)
+ -o, --output FILENAME       output results to file (stdout)
 ```
 
 
-## Example
+## Example - Repertoire overlap
 
 Let's use two simple input files. The first is `seta.tsv`:
 
@@ -110,26 +150,33 @@ CASSTSHQQYF	0.07	TCRBV07-06	TCRBJ02-01	B2
 
 We run the following command:
 
-`vdjsearch -d 1 -o output.tsv seta.tsv setb.tsv`
+`vdjsearch -m -d 1 -o output.tsv seta.tsv setb.tsv`
 
 Here is the output to the console:
 
 ```
-vdjsearch 0.0.3 - Immune repertoire analysis
+vdjsearch 0.0.4 - Immune repertoire analysis
 
+Command:           Overlap
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
-Ignore frequency:  No
-Ignore genes:      No
 Differences (d):   1
 Indels (i):        No
+Ignore freq. (f):  No
+Ignore genes (g):  No
 Output file (o):   output.tsv
+Output format (a): Matrix
 Threads: (t)       1
 
 Immune receptor repertoire set 1
 Reading sequences: 100%
-Sequences: 2, residues: 25, shortest: 11, longest: 14, average: 12.5
+Sequences:         2
+Residues:          25
+Shortest:          11
+Longest:           14
+Average length:    12.5
 Samples:           2
+
 Indexing:          100%
 Sorting:           100%
 
@@ -140,8 +187,13 @@ Sum	2	0.04000
 
 Immune receptor repertoire set 2
 Reading sequences: 100%
-Sequences: 3, residues: 39, shortest: 11, longest: 14, average: 13.0
+Sequences:         3
+Residues:          39
+Shortest:          11
+Longest:           14
+Average length:    13.0
 Samples:           2
+
 Indexing:          100%
 Sorting:           100%
 
@@ -150,13 +202,13 @@ Sorting:           100%
 2	      1	0.07000	B2
 Sum	3	0.22000
 
-Unique v_genes:    2
-Unique d_genes:    2
+Unique V genes:    2
+Unique J genes:    2
 Computing hashes:  100%
 Computing hashes:  100%
 Hashing sequences: 100%
 Analysing:         100%
-
+Writing results:   100%
 ```
 
 The program gives some statistics on the input files after reading
@@ -166,8 +218,8 @@ Here is the result in the `output.tsv` file:
 
 ```
 #sample	B1	B2
-A1	0.0e+00	7.0e-04
-A2	4.5e-03	0.0e+00
+A1	0.000000000e+00	7.000000000e-04
+A2	4.500000000e-03	0.000000000e+00
 ```
 
 Here, the sequence in sample A1 is similar to the sequence in sample
@@ -239,11 +291,3 @@ The analysis was performed on a Mac Mini M1.
 **Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.**
 *Nature Genetics*, 49 (5): 659-665.
 doi:[10.1038/ng.3822](https://doi.org/10.1038/ng.3822)
-
-
-## Future plans
-
-Some potential features:
-
-* Given a set of sequences and a repertoire, produce a table of which
-sequences are found in which sample of the repertoire.
