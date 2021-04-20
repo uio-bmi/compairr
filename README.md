@@ -85,7 +85,7 @@ taken into account unless the `-g` or `--ignore-genes` option is
 specified.
 
 The output will be in a similar format as the input file, but preceeded
-with two additonal columns. The first column will contain a cluster
+with two additional columns. The first column will contain a cluster
 number, starting at 1. The second column will contain the size of the
 cluster.
 
