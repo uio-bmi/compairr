@@ -299,7 +299,7 @@ void cluster(char * filename)
   progress_init("Clustering:       ", seqcount);
 
   /* for each non-clustered item, look for subseeds ... */
-
+  uint64_t x = 0;
   for(unsigned int seed = 0; seed < seqcount; seed++)
     {
       struct iteminfo_s * ap = iteminfo + seed;
@@ -315,6 +315,7 @@ void cluster(char * filename)
 
           /* find initial matches */
           process_seed(seed);
+          progress_update(++x);
 
           unsigned int subseed = ap->next;
 
@@ -322,6 +323,7 @@ void cluster(char * filename)
           while(subseed != no_cluster)
             {
               process_seed(subseed);
+              progress_update(++x);
               subseed = iteminfo[subseed].next;
             }
 
@@ -339,7 +341,6 @@ void cluster(char * filename)
           sp->size = clustersize;
           clustercount++;
         }
-      progress_update(seed+1);
     }
 
   progress_done();

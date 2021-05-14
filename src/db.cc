@@ -98,11 +98,26 @@ void db_init()
 void db_exit()
 {
   if (v_gene_list)
-    xfree(v_gene_list);
-  v_gene_list = 0;
+    {
+      for (uint64_t i = 0; i < v_gene_count; i++)
+	{
+	  xfree(v_gene_list[i]);
+	  v_gene_list[i] = 0;
+	}
+      xfree(v_gene_list);
+      v_gene_list = 0;
+    }
+
   if (j_gene_list)
-    xfree(j_gene_list);
-  j_gene_list = 0;
+    {
+      for (uint64_t i = 0; i < j_gene_count; i++)
+	{
+	  xfree(j_gene_list[i]);
+	  j_gene_list[i] = 0;
+	}
+      xfree(j_gene_list);
+      j_gene_list = 0;
+    }
 }
 
 uint64_t list_insert(char * * * list, uint64_t * alloc, uint64_t * count, char * item)
@@ -382,6 +397,17 @@ void db_hash(struct db * d)
 
 void db_free(struct db * d)
 {
+  if (d->sample_list)
+    {
+      for (uint64_t i = 0; i < d->sample_count; i++)
+	{
+	  xfree(d->sample_list[i]);
+	  d->sample_list[i] = 0;
+	}
+      xfree(d->sample_list);
+      d->sample_list = 0;
+    }
+
   if (d->residues_p)
     xfree(d->residues_p);
   if (d->seqindex)

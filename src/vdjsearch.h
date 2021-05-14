@@ -95,9 +95,10 @@ static_assert(INT_MAX > 32767, "Your compiler uses very short integers.");
 
 /* constants */
 
-#define PROG_NAME "vdjsearch"
-#define PROG_VERSION "0.0.4"
-#define PROG_BRIEF "Immune repertoire analysis"
+#define PROG_CMD "vdjsearch"
+#define PROG_NAME "VDJsearch"
+#define PROG_VERSION "0.0.5"
+#define PROG_BRIEF "Compare Adaptive Immune Receptor Repertoires"
 
 const unsigned int MAX_THREADS = 256;
 

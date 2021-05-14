@@ -108,7 +108,7 @@ void args_show()
 
 void args_usage()
 {
-  fprintf(stderr, "Usage: %s [OPTIONS] TSVFILE1 [TSVFILE2]\n", PROG_NAME);
+  fprintf(stderr, "Usage: %s [OPTIONS] TSVFILE1 [TSVFILE2]\n", PROG_CMD);
   fprintf(stderr, "\n");
   fprintf(stderr, "Commands:\n");
   fprintf(stderr, " -h, --help                  display this help and exit\n");

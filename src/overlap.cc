@@ -47,7 +47,7 @@ static hashtable_s * hashtable = nullptr;
 
 const uint64_t CHUNK = 1000;
 
-inline void hash_insert(uint64_t amp)
+void hash_insert(uint64_t amp)
 {
   /* set 2 */
   /* find the first empty bucket */
@@ -310,9 +310,13 @@ void overlap(char * set1_filename, char * set2_filename)
 {
   /* find overlaps between repertoires of samples */
 
+  db_init();
+
+
+  /**** Set 1 ****/
+
   fprintf(logfile, "Immune receptor repertoire set 1\n");
 
-  db_init();
   d = db_create();
   db_read(d, set1_filename);
 
@@ -379,6 +383,9 @@ void overlap(char * set1_filename, char * set2_filename)
   else
     fprintf(logfile, "Sum\t%" PRIu64 "\t%7.5lf\n", sum_size, sum_freq);
   fprintf(logfile, "\n");
+
+
+  /**** Set 2 ****/
 
   fprintf(logfile, "Immune receptor repertoire set 2\n");
 
