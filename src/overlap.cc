@@ -19,7 +19,7 @@
     PO Box 1080 Blindern, NO-0316 Oslo, Norway
 */
 
-#include "vdjsearch.h"
+#include "compairr.h"
 
 static struct db * d;
 static unsigned int set1_longestsequence = 0;

@@ -1,8 +1,8 @@
-# vdjsearch
+# CompAIRR
 
-The command line tool `vdjsearch` can be used to compare two sets of
-immune receptor repertoires. It can also be used to cluster the
-sequences in a repertoire.
+CompAIRR (`compairr`) is a command line tool to compare two sets of
+immune receptor repertoires, or cluster the sequences in one
+repertoire.
 
 
 ## General options
@@ -107,9 +107,9 @@ input.
 ## Command line options
 
 ```
-vdjsearch 0.0.4 - Immune repertoire analysis
+CompAIRR 0.1.0 - Compare Adaptive Immune Receptor Repertoires
 
-Usage: vdjsearch [OPTIONS] TSVFILE1 [TSVFILE2]
+Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
 
 Commands:
  -h, --help                  display this help and exit
@@ -150,12 +150,12 @@ CASSTSHQQYF	0.07	TCRBV07-06	TCRBJ02-01	B2
 
 We run the following command:
 
-`vdjsearch -m -d 1 -o output.tsv seta.tsv setb.tsv`
+`compairr -m -d 1 -o output.tsv seta.tsv setb.tsv`
 
 Here is the output to the console:
 
 ```
-vdjsearch 0.0.4 - Immune repertoire analysis
+CompAIRR 0.1.0 - Immune repertoire analysis
 
 Command:           Overlap
 Repertoire set 1:  seta.tsv
@@ -265,7 +265,7 @@ As a preliminary performance test, Cohort 2 ("Keck") of
 [the dataset](https://s3-us-west-2.amazonaws.com/publishedproject-supplements/emerson-2017-natgen/emerson-2017-natgen.zip)
 by Emerson et al. was compared to itself. It contains 120 repertoires
 with a total of 24 544 336 sequences. The test was performed with
-vdjsearch version 0.0.3. The timing results are shown below.
+version 0.0.3 of the tool. The timing results are shown below.
 
 Distance | Indels | Threads | Time (s) | Time (mm:ss)
 -------: | :----: | ------: | -------: | -----------:

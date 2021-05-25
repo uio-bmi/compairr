@@ -29,7 +29,7 @@
   https://doi.org/10.1145/1498698.1594230
 */
 
-#include "vdjsearch.h"
+#include "compairr.h"
 
 void bloom_patterns_generate(struct bloom_s * b);
 

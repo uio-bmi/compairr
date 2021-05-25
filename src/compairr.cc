@@ -38,7 +38,7 @@
 
 */
 
-#include "vdjsearch.h"
+#include "compairr.h"
 
 /* OPTIONS */
 

@@ -19,7 +19,7 @@
     PO Box 1080 Blindern, NO-0316 Oslo, Norway
 */
 
-#include "vdjsearch.h"
+#include "compairr.h"
 
 uint64_t * zobrist_tab_base = nullptr;
 static uint64_t * zobrist_v_base = nullptr;

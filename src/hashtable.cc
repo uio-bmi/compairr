@@ -19,7 +19,7 @@
     PO Box 1080 Blindern, NO-0316 Oslo, Norway
 */
 
-#include "vdjsearch.h"
+#include "compairr.h"
 
 #define HASHFILLPCT 70
 

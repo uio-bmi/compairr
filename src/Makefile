@@ -17,7 +17,7 @@
 #    Department of Informatics, University of Oslo,
 #    PO Box 1080 Blindern, NO-0316 Oslo, Norway
 
-# Makefile for vdjsearch
+# Makefile for CompAIRR
 
 COMMON = -g -std=c++11
 EXTRAOBJ =
@@ -69,24 +69,24 @@ LINKFLAGS = $(COMMON) $(LINKOPT)
 
 CXXFLAGS = $(COMMON) $(WARNINGS)
 
-PROG = vdjsearch
+PROG = compairr
 
-OBJS = arch.o bloompat.o cluster.o db.o hashtable.o overlap.o \
-	util.o variants.o vdjsearch.o zobrist.o
+OBJS = arch.o bloompat.o cluster.o compairr.o db.o hashtable.o \
+	overlap.o util.o variants.o zobrist.o
 
 DEPS = Makefile threads.h \
-	arch.h bloompat.h cluster.h db.h hashtable.h overlap.h \
-	util.h variants.h vdjsearch.h zobrist.h
+	arch.h bloompat.h cluster.h compairr.h db.h hashtable.h \
+	overlap.h util.h variants.h zobrist.h
 
 all : $(PROG)
 
-vdjsearch : $(OBJS) $(DEPS)
+compairr : $(OBJS) $(DEPS)
 	$(CXX) $(LINKFLAGS) -o $@ $(OBJS) $(LIBS)
 	mkdir -p ../bin
-	cp -a vdjsearch ../bin
+	cp -a compairr ../bin
 
 clean :
-	rm -rf vdjsearch *.o *~ gmon.out *.gcno *.gcda *.gcov
+	rm -rf compairr *.o *~ gmon.out *.gcno *.gcda *.gcov
 
 .o : .cc $(DEPS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
