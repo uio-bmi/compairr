@@ -34,7 +34,7 @@ struct hashtable_s * hash_init(uint64_t sequences)
     xmalloc(sizeof(struct hashtable_s));
 
   ht->hash_tablesize = 1;
-    while (100 * sequences > HASHFILLPCT * ht->hash_tablesize)
+  while (HASHFILLPCT * ht->hash_tablesize < 100 * sequences)
     ht->hash_tablesize <<= 1;
 
   ht->hash_mask = ht->hash_tablesize - 1;

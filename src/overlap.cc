@@ -272,9 +272,9 @@ void sim_thread(int64_t t)
       if (network_amp > set1_sequences)
         network_amp = set1_sequences;
       progress_update(network_amp);
-      pthread_mutex_unlock(&network_mutex);
-
       uint64_t chunksize = network_amp - firstseed;
+
+      pthread_mutex_unlock(&network_mutex);
 
       /* process chunksize sequences starting at seed */
       for (uint64_t z = 0; z < chunksize; z++)
