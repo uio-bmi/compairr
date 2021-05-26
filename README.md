@@ -1,7 +1,7 @@
 # CompAIRR
 
 CompAIRR (`compairr`) is a command line tool to compare two sets of
-immune receptor repertoires, or cluster the sequences in one
+adaptive immune receptor repertoires, or cluster the sequences in one
 repertoire.
 
 
