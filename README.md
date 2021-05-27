@@ -285,6 +285,47 @@ per sequence. Times are wall time measured by `/usr/bin/time`.
 The analysis was performed on a Mac Mini M1.
 
 
+## Development team
+
+The code has been developed by Torbjørn Rognes based on code from
+Swarm where Frédéric Mahé and Lucas Czeck made important
+contributions. Geir Kjetil Sandve had the idea of developing a tool
+for rapid repertoire comparison. Lonneke Scheffer has tested and
+benchmarked the tool. Milena Pavlovic has also contributed to the
+project.
+
+
+## Citing CompAIRR
+
+We are preparing a manuscript about CompAIRR, but it is not yet
+available. For the time being, please cite the following if you use
+CompAIRR in any published work:
+
+Rognes T, Scheffer L, Sandve GK (2021)
+CompAIRR: Efficient computation of similarities between adaptive
+immune receptor repertoires similarity allowing non-exact sequence
+matching.
+(In prep.)
+
+
+## Support
+
+We will prioritize fixing important bugs. We will also try to answer
+questions and implement suggested enhancements as time permits. As we
+have no dedicated funding for this project we cannot make any
+guarantees on the level of support.
+
+To report a potential bug, suggest enhancements or ask questions,
+please use one of the following means:
+
+* [Submit an issue on GitHub](https://github.com/uio-bmi/compairr/issues)
+
+* Send an email to [`torognes@ifi.uio.no`](mailto:torognes@ifi.uio.no)
+
+If you would like to contribute with code you are most welcome to
+[submit a pull request](https://github.com/uio-bmi/compairr/pulls).
+
+
 ## References
 
 * Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017)
