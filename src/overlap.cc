@@ -21,13 +21,14 @@
 
 #include "compairr.h"
 
-static struct db * d;
+static struct db * d1;
 static unsigned int set1_longestsequence = 0;
 static uint64_t set1_sequences = 0;
 static uint64_t set1_residues = 0;
 static uint64_t set1_samples = 0;
 static uint64_t * set1_sample_size = nullptr;
 static double * set1_sample_freq = nullptr;
+static unsigned int * set1_lookup_sample = nullptr;
 
 static struct db * d2;
 static unsigned int set2_longestsequence = 0;
@@ -36,6 +37,7 @@ static uint64_t set2_residues = 0;
 static uint64_t set2_samples = 0;
 static uint64_t * set2_sample_size = nullptr;
 static double * set2_sample_freq = nullptr;
+static unsigned int * set2_lookup_sample = nullptr;
 
 static pthread_mutex_t network_mutex;
 static uint64_t network_amp = 0;
@@ -66,7 +68,7 @@ int set1_compare_by_sample_name(const void * a, const void * b)
 {
   const unsigned int * x = (const unsigned int *) a;
   const unsigned int * y = (const unsigned int *) b;
-  return strcmp(db_getsamplename(d, *x), db_getsamplename(d, *y));
+  return strcmp(db_getsamplename(d1, *x), db_getsamplename(d1, *y));
 }
 
 int set2_compare_by_sample_name(const void * a, const void * b)
@@ -97,8 +99,8 @@ void find_variant_matches(uint64_t seed,
 
           /* double check that everything matches */
 
-          unsigned int seed_v_gene = db_get_v_gene(d, seed);
-          unsigned int seed_j_gene = db_get_j_gene(d, seed);
+          unsigned int seed_v_gene = db_get_v_gene(d1, seed);
+          unsigned int seed_j_gene = db_get_j_gene(d1, seed);
 
           unsigned int amp_v_gene = db_get_v_gene(d2, amp);
           unsigned int amp_j_gene = db_get_j_gene(d2, amp);
@@ -107,9 +109,9 @@ void find_variant_matches(uint64_t seed,
               ((seed_v_gene == amp_v_gene) && (seed_j_gene == amp_j_gene)))
             {
               unsigned char * seed_sequence
-                = (unsigned char *) db_getsequence(d, seed);
+                = (unsigned char *) db_getsequence(d1, seed);
               unsigned int seed_seqlen
-                = db_getsequencelen(d, seed);
+                = db_getsequencelen(d1, seed);
               unsigned char * amp_sequence
                 = (unsigned char *) db_getsequence(d2, amp);
               unsigned int amp_seqlen
@@ -119,9 +121,9 @@ void find_variant_matches(uint64_t seed,
                                 var,
                                 amp_sequence, amp_seqlen))
                 {
-                  unsigned int i = db_getsampleno(d, seed);
+                  unsigned int i = db_getsampleno(d1, seed);
                   unsigned int j = db_getsampleno(d2, amp);
-                  double f = db_get_freq(d, seed);
+                  double f = db_get_freq(d1, seed);
                   double g = db_get_freq(d2, amp);
                   sample_matrix[set2_samples * i + j] += f * g;
 
@@ -139,11 +141,11 @@ void process_variants(uint64_t seed,
                       double * sample_matrix)
 {
   unsigned int variant_count = 0;
-  unsigned char * sequence = (unsigned char *) db_getsequence(d, seed);
-  unsigned int seqlen = db_getsequencelen(d, seed);
-  uint64_t hash = db_gethash(d, seed);
-  uint64_t v_gene = db_get_v_gene(d, seed);
-  uint64_t j_gene = db_get_j_gene(d, seed);
+  unsigned char * sequence = (unsigned char *) db_getsequence(d1, seed);
+  unsigned int seqlen = db_getsequencelen(d1, seed);
+  uint64_t hash = db_gethash(d1, seed);
+  uint64_t v_gene = db_get_v_gene(d1, seed);
+  uint64_t j_gene = db_get_j_gene(d1, seed);
 
   generate_variants(hash,
                     sequence, seqlen, v_gene, j_gene,
@@ -165,11 +167,11 @@ void process_variants_avoid_duplicates(uint64_t seed,
                                        struct bloom_s * bloom_d)
 {
   unsigned int variant_count = 0;
-  unsigned char * sequence = (unsigned char *) db_getsequence(d, seed);
-  unsigned int seqlen = db_getsequencelen(d, seed);
-  uint64_t hash = db_gethash(d, seed);
-  uint64_t v_gene = db_get_v_gene(d, seed);
-  uint64_t j_gene = db_get_j_gene(d, seed);
+  unsigned char * sequence = (unsigned char *) db_getsequence(d1, seed);
+  unsigned int seqlen = db_getsequencelen(d1, seed);
+  uint64_t hash = db_gethash(d1, seed);
+  uint64_t v_gene = db_get_v_gene(d1, seed);
+  uint64_t j_gene = db_get_j_gene(d1, seed);
 
   generate_variants(hash,
                     sequence, seqlen, v_gene, j_gene,
@@ -317,13 +319,13 @@ void overlap(char * set1_filename, char * set2_filename)
 
   fprintf(logfile, "Immune receptor repertoire set 1\n");
 
-  d = db_create();
-  db_read(d, set1_filename);
+  d1 = db_create();
+  db_read(d1, set1_filename);
 
-  set1_longestsequence = db_getlongestsequence(d);
-  set1_sequences = db_getsequencecount(d);
-  set1_samples = db_getsamplecount(d);
-  set1_residues = db_getresiduescount(d);
+  set1_longestsequence = db_getlongestsequence(d1);
+  set1_sequences = db_getsequencecount(d1);
+  set1_samples = db_getsamplecount(d1);
+  set1_residues = db_getresiduescount(d1);
 
   fprintf(logfile, "\n");
 
@@ -339,14 +341,14 @@ void overlap(char * set1_filename, char * set2_filename)
     set1_sample_freq[s] = 0.0;
   for (uint64_t i = 0; i < set1_sequences ; i++)
     {
-      unsigned int s = db_getsampleno(d, i);
+      unsigned int s = db_getsampleno(d1, i);
       set1_sample_size[s]++;
-      set1_sample_freq[s] += db_get_freq(d, i);
+      set1_sample_freq[s] += db_get_freq(d1, i);
     }
 
   /* set 1 : sort samples alphanumerically for display */
 
-  unsigned int * set1_lookup_sample =
+  set1_lookup_sample =
     (unsigned int *) xmalloc(sizeof(unsigned int) * set1_samples);
   for (unsigned int i = 0; i < set1_samples; i++)
     set1_lookup_sample[i] = i;
@@ -368,13 +370,13 @@ void overlap(char * set1_filename, char * set2_filename)
                 i+1,
                 set1_sample_size[s],
                 set1_sample_freq[s],
-                db_getsamplename(d, s));
+                db_getsamplename(d1, s));
       else
         fprintf(logfile, "%u\t%7" PRIu64 "\t%7.5lf\t%s\n",
                 i+1,
                 set1_sample_size[s],
                 set1_sample_freq[s],
-                db_getsamplename(d, s));
+                db_getsamplename(d1, s));
       sum_size += set1_sample_size[s];
       sum_freq += set1_sample_freq[s];
     }
@@ -387,74 +389,97 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /**** Set 2 ****/
 
-  fprintf(logfile, "Immune receptor repertoire set 2\n");
-
-  d2 = db_create();
-  db_read(d2, set2_filename);
-
-  set2_longestsequence = db_getlongestsequence(d2);
-  set2_sequences = db_getsequencecount(d2);
-  set2_samples = db_getsamplecount(d2);
-  set2_residues = db_getresiduescount(d2);
-
-  fprintf(logfile, "\n");
-
-  /* determine number of sequences in each of the samples (Set 2) */
-
-  set2_sample_size = static_cast<uint64_t *>
-    (xmalloc(sizeof(uint64_t) * set2_samples));
-  for (unsigned int t = 0; t < set2_samples ; t++)
-    set2_sample_size[t] = 0;
-  set2_sample_freq = static_cast<double *>
-    (xmalloc(sizeof(double) * set2_samples));
-  for (unsigned int t = 0; t < set2_samples ; t++)
-    set2_sample_freq[t] = 0.0;
-  for (uint64_t j = 0; j < set2_sequences ; j++)
+  if (set2_filename && strcmp(set1_filename, set2_filename))
     {
-      unsigned int t = db_getsampleno(d2, j);
-      set2_sample_size[t]++;
-      set2_sample_freq[t] += db_get_freq(d2, j);
-    }
+      fprintf(logfile, "Immune receptor repertoire set 2\n");
 
-  /* set 2 : sort samples alphanumerically for display */
+      d2 = db_create();
+      db_read(d2, set2_filename);
 
-  unsigned int * set2_lookup_sample =
-    (unsigned int *) xmalloc(sizeof(unsigned int) * set2_samples);
-  for (unsigned int j = 0; j < set2_samples; j++)
-    set2_lookup_sample[j] = j;
-  qsort(set2_lookup_sample,
-        set2_samples,
-        sizeof(unsigned int),
-        set2_compare_by_sample_name);
+      set2_longestsequence = db_getlongestsequence(d2);
+      set2_sequences = db_getsequencecount(d2);
+      set2_samples = db_getsamplecount(d2);
+      set2_residues = db_getresiduescount(d2);
 
-  /* list of samples in set 2 */
+      fprintf(logfile, "\n");
 
-  sum_size = 0;
-  sum_freq = 0.0;
-  fprintf(logfile, "#no\tseqs\tfreq\tsample\n");
-  for (unsigned int j = 0; j < set2_samples; j++)
-    {
-      unsigned int t = set2_lookup_sample[j];
+      /* determine number of sequences in each of the samples (Set 2) */
+
+      set2_sample_size = static_cast<uint64_t *>
+        (xmalloc(sizeof(uint64_t) * set2_samples));
+      for (unsigned int t = 0; t < set2_samples ; t++)
+        set2_sample_size[t] = 0;
+      set2_sample_freq = static_cast<double *>
+        (xmalloc(sizeof(double) * set2_samples));
+      for (unsigned int t = 0; t < set2_samples ; t++)
+        set2_sample_freq[t] = 0.0;
+      for (uint64_t j = 0; j < set2_sequences ; j++)
+        {
+          unsigned int t = db_getsampleno(d2, j);
+          set2_sample_size[t]++;
+          set2_sample_freq[t] += db_get_freq(d2, j);
+        }
+
+      /* set 2 : sort samples alphanumerically for display */
+
+      set2_lookup_sample =
+        (unsigned int *) xmalloc(sizeof(unsigned int) * set2_samples);
+      for (unsigned int j = 0; j < set2_samples; j++)
+        set2_lookup_sample[j] = j;
+      qsort(set2_lookup_sample,
+            set2_samples,
+            sizeof(unsigned int),
+            set2_compare_by_sample_name);
+
+      /* list of samples in set 2 */
+
+      sum_size = 0;
+      sum_freq = 0.0;
+      fprintf(logfile, "#no\tseqs\tfreq\tsample\n");
+      for (unsigned int j = 0; j < set2_samples; j++)
+        {
+          unsigned int t = set2_lookup_sample[j];
+          if (opt_ignore_frequency)
+            fprintf(logfile, "%u\t%7" PRIu64 "\t%7.0lf\t%s\n",
+                    j+1,
+                    set2_sample_size[t],
+                    set2_sample_freq[t],
+                    db_getsamplename(d2, t));
+          else
+            fprintf(logfile, "%u\t%7" PRIu64 "\t%7.5lf\t%s\n",
+                    j+1,
+                    set2_sample_size[t],
+                    set2_sample_freq[t],
+                    db_getsamplename(d2, t));
+          sum_size += set2_sample_size[t];
+          sum_freq += set2_sample_freq[t];
+        }
       if (opt_ignore_frequency)
-        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.0lf\t%s\n",
-                j+1,
-                set2_sample_size[t],
-                set2_sample_freq[t],
-                db_getsamplename(d2, t));
+        fprintf(logfile, "Sum\t%" PRIu64 "\t%7.0lf\n", sum_size, sum_freq);
       else
-        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.5lf\t%s\n",
-                j+1,
-                set2_sample_size[t],
-                set2_sample_freq[t],
-                db_getsamplename(d2, t));
-      sum_size += set2_sample_size[t];
-      sum_freq += set2_sample_freq[t];
+        fprintf(logfile, "Sum\t%" PRIu64 "\t%7.5lf\n", sum_size, sum_freq);
+      fprintf(logfile, "\n");
     }
-  if (opt_ignore_frequency)
-    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.0lf\n", sum_size, sum_freq);
   else
-    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.5lf\n", sum_size, sum_freq);
-  fprintf(logfile, "\n");
+    {
+      /* set2 = set1 */
+
+      d2 = d1;
+
+      fprintf(logfile, "Immune receptor repertoire set 2\n");
+      fprintf(logfile, "Same as set 1\n");
+      fprintf(logfile, "\n");
+
+      set2_longestsequence = db_getlongestsequence(d2);
+      set2_sequences = db_getsequencecount(d2);
+      set2_samples = db_getsamplecount(d2);
+      set2_residues = db_getresiduescount(d2);
+
+      set2_sample_size = set1_sample_size;
+      set2_sample_freq = set1_sample_freq;
+      set2_lookup_sample = set1_lookup_sample;
+    }
+
 
   unsigned int overall_longest = MAX(set1_longestsequence,
                                      set2_longestsequence);
@@ -471,8 +496,9 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /* compute hashes for each sequence in database */
 
-  db_hash(d);
-  db_hash(d2);
+  db_hash(d1);
+  if (d2 != d1)
+    db_hash(d2);
 
   /* compute hash for all sequences and store them in a hash table */
   /* use an additional bloom filter for increased speed */
@@ -531,7 +557,7 @@ void overlap(char * set1_filename, char * set2_filename)
               unsigned int t = set2_lookup_sample[j];
               fprintf(outfile,
                       "%s\t%s\t%15.9le\n",
-                      db_getsamplename(d, s),
+                      db_getsamplename(d1, s),
                       db_getsamplename(d2, t),
                       sample_matrix[set2_samples * s + t]);
               x++;
@@ -547,7 +573,7 @@ void overlap(char * set1_filename, char * set2_filename)
       for (unsigned int i = 0; i < set1_samples; i++)
         {
           unsigned int s = set1_lookup_sample[i];
-          fprintf(outfile, "%s", db_getsamplename(d, s));
+          fprintf(outfile, "%s", db_getsamplename(d1, s));
           for (unsigned int j = 0; j < set2_samples; j++)
             {
               unsigned int t = set2_lookup_sample[j];
@@ -569,17 +595,22 @@ void overlap(char * set1_filename, char * set2_filename)
 
   hash_exit(hashtable);
 
-  db_free(d2);
-  db_free(d);
-  db_exit();
-
   zobrist_exit();
 
-  xfree(set2_lookup_sample);
-  xfree(set2_sample_freq);
-  xfree(set2_sample_size);
+  if (d1 != d2)
+    {
+      xfree(set2_lookup_sample);
+      xfree(set2_sample_freq);
+      xfree(set2_sample_size);
+      db_free(d2);
+    }
+  else
+    d2 = nullptr;
 
   xfree(set1_lookup_sample);
   xfree(set1_sample_freq);
   xfree(set1_sample_size);
+  db_free(d1);
+
+  db_exit();
 }

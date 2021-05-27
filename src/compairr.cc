@@ -94,7 +94,7 @@ void args_show()
   fprintf(logfile, "Command:           %s\n", opt_cluster ? "Cluster" : "Overlap");
   fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
   if (opt_matrix)
-    fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename);
+    fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename ? input2_filename : "(same as set 1)");
   fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
   fprintf(logfile, "Ignore freq. (f):  %s\n",
@@ -304,6 +304,11 @@ void args_init(int argc, char **argv)
         {
           input1_filename = argv[optind];
           input2_filename = argv[optind + 1];
+        }
+      else if (optind + 1 == argc)
+        {
+          input1_filename = argv[optind];
+          input2_filename = 0;
         }
       else
         {

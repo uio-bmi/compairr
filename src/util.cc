@@ -34,11 +34,12 @@ void progress_init(const char * prompt, uint64_t size)
   progress_size = size;
   progress_chunk = size < progress_granularity ?
     1 : size / progress_granularity;
-  progress_next = 1;
+  progress_next = progress_chunk;
   if (opt_log)
     fprintf(logfile, "%s", prompt);
   else
     fprintf(logfile, "%s %.0f%%", prompt, 0.0);
+  fflush(logfile);
 }
 
 void progress_update(uint64_t progress)

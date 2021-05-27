@@ -38,7 +38,9 @@ To compute the overlap between two repertoire sets, use the `-m` or
 
 For each of the two repertoire sets there must an input file of
 tab-separated values. The two input files are specified on the command
-line without any preceeding option letter.
+line without any preceeding option letter. If only one filename is
+specified on the command line, or the same filename is specified
+twice, it is assumed that the set should be compared to itself.
 
 Each set can contain many repertoires (~1000) and each repertoire can
 contain many sequences (~100000).
