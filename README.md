@@ -301,10 +301,9 @@ We are preparing a manuscript about CompAIRR, but it is not yet
 available. For the time being, please cite the following if you use
 CompAIRR in any published work:
 
-Rognes T, Scheffer L, Sandve GK (2021)
-CompAIRR: Efficient computation of similarities between adaptive
-immune receptor repertoires similarity allowing non-exact sequence
-matching.
+* Rognes T, Scheffer L, Sandve GK (2021)
+**CompAIRR: Efficient computation of similarities between adaptive
+immune receptor repertoires allowing non-exact sequence matching.**
 (In prep.)
 
 
