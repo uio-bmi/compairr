@@ -363,7 +363,7 @@ void cluster(char * filename)
           db_fprint_sequence(outfile, d, a);
           fprintf(outfile,
                   "\t%15.9le\t%s\t%s\t%s\n",
-                  db_get_freq(d, a),
+                  db_get_count(d, a),
                   db_get_v_gene_name(d, a),
                   db_get_j_gene_name(d, a),
                   db_getsamplename(d, db_getsampleno(d, a)));

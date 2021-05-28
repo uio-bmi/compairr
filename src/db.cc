@@ -26,8 +26,6 @@
 #define MEMCHUNK 1048576
 #define SEQCHUNK 65536
 
-constexpr int LINEALLOC = 2048;
-
 static signed char map_aa[256] =
   {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -120,7 +118,10 @@ void db_exit()
     }
 }
 
-uint64_t list_insert(char * * * list, uint64_t * alloc, uint64_t * count, char * item)
+uint64_t list_insert(char * * * list,
+                     uint64_t * alloc,
+                     uint64_t * count,
+                     char * item)
 {
   /* linear list */
 
@@ -175,6 +176,232 @@ struct db * db_create()
   return d;
 }
 
+static int col_junction_aa = 0;
+static int col_duplicate_count = 0;
+static int col_v_call = 0;
+static int col_j_call = 0;
+static int col_repertoire_id = 0;
+
+void parse_airr_tsv_header(char * line)
+{
+  char delim[] = "\t";
+  char * string = line;
+  char * token = nullptr;
+
+  int i = 1;
+
+  while ((token = strsep(& string, delim)) != NULL)
+    {
+      if (strcmp(token, "junction_aa") == 0)
+        {
+          col_junction_aa = i;
+        }
+      else if (strcmp(token, "duplicate_count") == 0)
+        {
+          col_duplicate_count = i;
+        }
+      else if (strcmp(token, "v_call") == 0)
+        {
+          col_v_call = i;
+        }
+      else if (strcmp(token, "j_call") == 0)
+        {
+          col_j_call = i;
+        }
+      else if (strcmp(token, "repertoire_id") == 0)
+        {
+          col_repertoire_id = i;
+        }
+      i++;
+    }
+
+  if (! col_junction_aa ||
+      ! col_duplicate_count ||
+      ! col_v_call ||
+      ! col_j_call ||
+      ! col_repertoire_id)
+    {
+      fprintf(logfile,
+        "\nMissing essential column(s) in header of AIRR TSV input file:");
+      if (! col_junction_aa)
+        fprintf(logfile, " junction_aa");
+      if (! col_duplicate_count)
+        fprintf(logfile, " duplicate_count");
+      if (! col_v_call)
+        fprintf(logfile, " v_call");
+      if (! col_j_call)
+        fprintf(logfile, " j_call");
+      if (! col_repertoire_id)
+        fprintf(logfile, " repertoire_id");
+      fprintf(logfile, "\n");
+      exit(1);
+    }
+}
+
+void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
+{
+  char * junction_aa = NULL;
+  char * duplicate_count = NULL;
+  char * v_call = NULL;
+  char * j_call = NULL;
+  char * repertoire_id = NULL;
+
+  char delim[] = "\t";
+  char * string = line;
+  char * token = nullptr;
+
+  int i = 1;
+
+  while ((token = strsep(& string, delim)) != NULL)
+    {
+      if (i == col_junction_aa)
+        {
+          junction_aa = token;
+        }
+      else if (i == col_duplicate_count)
+        {
+          duplicate_count = token;
+        }
+      else if (i == col_v_call)
+        {
+          v_call = token;
+        }
+      else if (i == col_j_call)
+        {
+          j_call = token;
+        }
+      else if (i == col_repertoire_id)
+        {
+          repertoire_id = token;
+        }
+      i++;
+    }
+
+  /* check that all values are read */
+
+  if (! (junction_aa && duplicate_count && v_call && j_call && repertoire_id))
+    {
+      fprintf(logfile,
+              "\n\nError: Missing data on line: %" PRIu64 "\n",
+              lineno);
+      fprintf(logfile,
+              "junction_aa: %s duplicate_count: %s "
+              "v_call: %s j_call: %s repertoire_id: %s\n",
+              junction_aa, duplicate_count, v_call, j_call, repertoire_id);
+      exit(1);
+    }
+
+  /* check that strings are not empty */
+
+  if (! (*junction_aa && *duplicate_count && *v_call && *j_call &&
+        *repertoire_id))
+    {
+      fprintf(logfile, "\n\nError: Empty string on line: %" PRIu64 "\n",
+              lineno);
+      fprintf(logfile, "junction_aa: %s duplicate_count: %s "
+              "v_call: %s j_call: %s repertoire_id: %s\n",
+              junction_aa, duplicate_count, v_call, j_call, repertoire_id);
+      exit(1);
+    }
+
+  /* check the converted duplicate_count */
+
+  long count = 0;
+  char * endptr;
+  count = strtol(duplicate_count, &endptr, 10);
+
+  if ((endptr == duplicate_count) || (endptr == nullptr) || (*endptr) ||
+      (count <= 0))
+    {
+      fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
+              PRIu64 ": %s\n", lineno, duplicate_count);
+      exit(1);
+    }
+
+  /* make room for another sequence */
+
+  if (d->sequences >= d->seqindex_alloc)
+    {
+      d->seqindex_alloc += SEQCHUNK;
+      d->seqindex = static_cast<seqinfo_t *>
+        (xrealloc(d->seqindex, d->seqindex_alloc * sizeof(seqinfo_s)));
+    }
+
+  /* make room for more residues */
+
+  unsigned int len_estimate = strlen(junction_aa);
+
+  if (d->residues_count + len_estimate > d->residues_alloc)
+    {
+      d->residues_alloc += MEMCHUNK;
+      d->residues_p = static_cast<char *>
+        (xrealloc(d->residues_p, d->residues_alloc));
+    }
+
+  /* scan and store sequence */
+
+  seqinfo_t * p = d->seqindex + d->sequences;
+  char * q = d->residues_p + d->residues_count;
+  unsigned int seqlen = 0;
+
+  for(unsigned int i = 0; i < len_estimate; i++)
+    {
+      unsigned char c = junction_aa[i];
+      signed char m = map_aa[static_cast<unsigned int>(c)];
+      if (m >= 0)
+        {
+          *q++ = m;
+          seqlen++;
+        }
+      else
+        {
+          if ((c >= 32) && (c <= 126))
+            fprintf(logfile,
+                    "\n\nError: Illegal character '%c' in sequence "
+                    "on line %" PRIu64 "\n",
+                    c,
+                    lineno);
+          else
+            fprintf(logfile,
+                    "\n\nError: Illegal character (ascii no %d) in sequence "
+                    "on line %" PRIu64 "\n",
+                    c,
+                    lineno);
+          exit(1);
+        }
+    }
+
+  uint64_t v_gene_index = list_insert(& v_gene_list,
+                                      & v_gene_alloc,
+                                      & v_gene_count,
+                                      v_call);
+
+  uint64_t j_gene_index = list_insert(& j_gene_list,
+                                      & j_gene_alloc,
+                                      & j_gene_count,
+                                      j_call);
+
+  uint64_t sample_index = list_insert(& d->sample_list,
+                                      & d->sample_alloc,
+                                      & d->sample_count,
+                                      repertoire_id);
+
+  p->seqlen = seqlen;
+  p->sample_no = sample_index;
+  p->v_gene_no = v_gene_index;
+  p->j_gene_no = j_gene_index;
+  p->freq = count;
+  p->hash = 0;
+
+  if (seqlen > d->longest)
+    d->longest = seqlen;
+  if (seqlen < d->shortest)
+    d->shortest = seqlen;
+
+  d->sequences++;
+  d->residues_count += seqlen;
+}
+
 void db_read(struct db * d, const char * filename)
 {
   FILE * fp = nullptr;
@@ -183,7 +410,9 @@ void db_read(struct db * d, const char * filename)
       fp = fopen_input(filename);
       if (!fp)
         {
-          fprintf(stderr, "\nError: Unable to open input data file (%s).\n", filename);
+          fprintf(logfile,
+                  "\nError: Unable to open input data file (%s).\n",
+                  filename);
           exit(1);
         }
     }
@@ -196,169 +425,119 @@ void db_read(struct db * d, const char * filename)
 
   if (fstat(fileno(fp), & fs))
     {
-      fprintf(stderr, "\nUnable to fstat on input file (%s)\n", filename);
+      fprintf(logfile, "\nUnable to fstat on input file (%s)\n", filename);
       exit(1);
     }
   bool is_regular = S_ISREG(fs.st_mode);
   int64_t filesize = is_regular ? fs.st_size : 0;
 
   if (! is_regular)
-    fprintf(logfile, "Waiting for data... (Hit Ctrl-C and run %s -h if you meant to read data from a file.)\n", PROG_NAME);
+    fprintf(logfile, "Waiting for data from standard input...\n");
 
-  char line[LINEALLOC];
-  line[0] = 0;
-  if (!fgets(line, LINEALLOC, fp))
-    line[0] = 0;
-
-  uint64_t lineno = 1;
-
-  progress_init("Reading sequences:", static_cast<uint64_t>(filesize));
+  size_t line_alloc = 4096;
+  char * line = (char *) xmalloc(line_alloc);
+  uint64_t lineno = 0;
+  ssize_t linelen = 0;
 
   d->longest = 0;
   d->shortest = UINT_MAX;
 
-  while(line[0])
+  int state = 0;
+
+  progress_init("Reading sequences:", static_cast<uint64_t>(filesize));
+
+  linelen = getline(& line, & line_alloc, fp);
+
+  if (linelen < 0)
+    fatal("Unable to read from the input file");
+
+  if ((linelen > 0) && (line[linelen-1] == '\n'))
     {
-      /* make room for another sequence */
+      line[linelen-1] = 0;
+      linelen--;
+    }
 
-      if (d->sequences >= d->seqindex_alloc)
+  if ((linelen > 0) && (line[linelen-1] == '\r'))
+    {
+      line[linelen-1] = 0;
+      linelen--;
+    }
+
+  while (linelen >= 0)
+    {
+      lineno++;
+
+      if (state == 0)
         {
-          d->seqindex_alloc += SEQCHUNK;
-          d->seqindex = static_cast<seqinfo_t *>
-            (xrealloc(d->seqindex, d->seqindex_alloc * sizeof(seqinfo_s)));
-        }
-
-      char * aa_seq = NULL;
-      char * freq_s = NULL;
-      char * v_gene = NULL;
-      char * j_gene = NULL;
-      char * sample = NULL;
-
-      double freq = 0.0;
-
-      char tab[] = "\t";
-      char nl[] = "\r\n";
-
-      aa_seq = strtok(line, tab);
-
-      if (aa_seq)
-        freq_s = strtok(NULL, tab);
-
-      if (freq_s)
-        {
-          freq = strtod(freq_s, NULL);
-          v_gene = strtok(NULL, tab);
-        }
-
-      if (v_gene)
-        j_gene = strtok(NULL, tab);
-
-      if (j_gene)
-        sample = strtok(NULL, nl);
-
-      if (! (aa_seq && freq_s && v_gene && j_gene && sample))
-        {
-          fprintf(stderr, "Missing data on line: %" PRIu64 "\n", lineno);
-          fprintf(stderr, "aa_seq: %s freq: %s v_gene: %s j_gene: %s sample: %s\n",
-                 aa_seq, freq_s, v_gene, j_gene, sample);
-          fatal("fatal");
-        }
-
-      /* make room for more residues */
-
-      unsigned int len_estimate = freq_s - aa_seq - 1;
-
-      if (d->residues_count + len_estimate > d->residues_alloc)
-        {
-          d->residues_alloc += MEMCHUNK;
-          d->residues_p = static_cast<char *>
-            (xrealloc(d->residues_p, d->residues_alloc));
-        }
-
-      /* scan and store sequence */
-
-      seqinfo_t * p = d->seqindex + d->sequences;
-      char * q = d->residues_p + d->residues_count;
-      unsigned int seqlen = 0;
-
-      for(unsigned int i = 0; i < len_estimate; i++)
-        {
-          unsigned char c = aa_seq[i];
-          signed char m = map_aa[static_cast<unsigned int>(c)];
-          if (m >= 0)
+          if (line[0] == '#')
             {
-              *q++ = m;
-              seqlen++;
+              /* ignore initial comment section */
+            }
+          else if (line[0] == '@')
+            {
+              /* ignore initial comment section */
             }
           else
             {
-              if ((c >= 32) && (c <= 126))
-                fprintf(stderr,
-                        "\nError: Illegal character '%c' in sequence on line %" PRIu64 "\n",
-                        c,
-                        lineno);
-              else
-                fprintf(stderr,
-                        "\nError: Illegal character (ascii no %d) in sequence on line %" PRIu64 "\n",
-                        c,
-                        lineno);
-              exit(1);
+              parse_airr_tsv_header(line);
+              state = 1;
             }
         }
+      else
+        {
+          parse_airr_tsv_line(line, lineno, d);
+        }
 
-      uint64_t v_gene_index = list_insert(& v_gene_list,
-                                          & v_gene_alloc,
-                                          & v_gene_count,
-                                          v_gene);
-
-      uint64_t j_gene_index = list_insert(& j_gene_list,
-                                          & j_gene_alloc,
-                                          & j_gene_count,
-                                          j_gene);
-
-      uint64_t sample_index = list_insert(& d->sample_list,
-                                          & d->sample_alloc,
-                                          & d->sample_count,
-                                          sample);
-
-      p->seqlen = seqlen;
-      p->sample_no = sample_index;
-      p->v_gene_no = v_gene_index;
-      p->j_gene_no = j_gene_index;
-      p->freq = freq;
-      p->hash = 0;
-
-      if (seqlen > d->longest)
-        d->longest = seqlen;
-      if (seqlen < d->shortest)
-        d->shortest = seqlen;
-
-      d->sequences++;
-      d->residues_count += seqlen;
-
-      /* get next line */
-
-      line[0] = 0;
-      if (!fgets(line, LINEALLOC, fp))
-        line[0] = 0;
-      lineno++;
+      /* update progress */
 
       if (is_regular)
         progress_update(static_cast<uint64_t>(ftell(fp)));
+
+      /* get next line */
+
+      linelen = getline(& line, & line_alloc, fp);
+
+      if (linelen < 0)
+        break;
+
+      /* remove LF at end of line */
+
+      if ((linelen > 0) && (line[linelen-1] == '\n'))
+        {
+          line[linelen-1] = 0;
+          linelen--;
+        }
+
+      /* remove CR at end of line if from DOS/Windows */
+
+      if ((linelen > 0) && (line[linelen-1] == '\r'))
+        {
+          line[linelen-1] = 0;
+          linelen--;
+        }
     }
+
   progress_done();
+
+  if (line)
+    xfree(line);
+  line = nullptr;
 
   fclose(fp);
 
   fprintf(logfile,
-          "Sequences:         %" PRIu64 "\nResidues:          %" PRIu64 "\nShortest:          %u\nLongest:           %u\nAverage length:    %4.1lf\n",
+          "Sequences:         %" PRIu64 "\n"
+          "Residues:          %" PRIu64 "\n"
+          "Shortest:          %u\n"
+          "Longest:           %u\n"
+          "Average length:    %4.1lf\n",
           d->sequences,
           d->residues_count,
           d->shortest,
           d->longest,
           1.0 * d->residues_count / d->sequences);
 
-  fprintf(logfile, "Samples:           %" PRIu64 "\n\n", d->sample_count);
+  fprintf(logfile, "Repertoires:       %" PRIu64 "\n", d->sample_count);
 
   /* add sequence pointers to index table */
 
@@ -460,9 +639,9 @@ uint64_t db_get_j_gene(struct db * d, uint64_t seqno)
   return d->seqindex[seqno].j_gene_no;
 }
 
-double db_get_freq(struct db * d, uint64_t seqno)
+double db_get_count(struct db * d, uint64_t seqno)
 {
-  return opt_ignore_frequency ? 1.0 : d->seqindex[seqno].freq;
+  return opt_ignore_counts ? 1.0 : d->seqindex[seqno].freq;
 }
 
 uint64_t db_getsampleno(struct db * d, uint64_t seqno)

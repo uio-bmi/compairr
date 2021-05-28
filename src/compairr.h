@@ -48,6 +48,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <math.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -117,7 +118,7 @@ const int alphabet_size = 20;
 extern bool opt_alternative;
 extern bool opt_cluster;
 extern bool opt_help;
-extern bool opt_ignore_frequency;
+extern bool opt_ignore_counts;
 extern bool opt_ignore_genes;
 extern bool opt_indels;
 extern bool opt_matrix;

@@ -55,7 +55,7 @@ uint64_t db_get_v_gene(struct db * d, uint64_t seqno);
 
 uint64_t db_get_j_gene(struct db * d, uint64_t seqno);
 
-double db_get_freq(struct db * d, uint64_t seqno);
+double db_get_count(struct db * d, uint64_t seqno);
 
 uint64_t db_getsampleno(struct db * d, uint64_t seqno);
 

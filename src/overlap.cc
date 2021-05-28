@@ -123,8 +123,8 @@ void find_variant_matches(uint64_t seed,
                 {
                   unsigned int i = db_getsampleno(d1, seed);
                   unsigned int j = db_getsampleno(d2, amp);
-                  double f = db_get_freq(d1, seed);
-                  double g = db_get_freq(d2, amp);
+                  double f = db_get_count(d1, seed);
+                  double g = db_get_count(d2, amp);
                   sample_matrix[set2_samples * i + j] += f * g;
 
                   if (bloom_d)
@@ -317,7 +317,7 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /**** Set 1 ****/
 
-  fprintf(logfile, "Immune receptor repertoire set 1\n");
+  fprintf(logfile, "Immune receptor repertoire set 1\n\n");
 
   d1 = db_create();
   db_read(d1, set1_filename);
@@ -343,7 +343,7 @@ void overlap(char * set1_filename, char * set2_filename)
     {
       unsigned int s = db_getsampleno(d1, i);
       set1_sample_size[s]++;
-      set1_sample_freq[s] += db_get_freq(d1, i);
+      set1_sample_freq[s] += db_get_count(d1, i);
     }
 
   /* set 1 : sort samples alphanumerically for display */
@@ -357,42 +357,48 @@ void overlap(char * set1_filename, char * set2_filename)
         sizeof(unsigned int),
         set1_compare_by_sample_name);
 
-  /* list of samples in set 1 */
+  /* list of repertoires in set 1 */
 
-  fprintf(logfile, "#no\tseqs\tfreq\tsample\n");
   uint64_t sum_size = 0;
   double sum_freq = 0.0;
   for (unsigned int i = 0; i < set1_samples; i++)
     {
       unsigned int s = set1_lookup_sample[i];
-      if (opt_ignore_frequency)
-        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.0lf\t%s\n",
-                i+1,
-                set1_sample_size[s],
-                set1_sample_freq[s],
-                db_getsamplename(d1, s));
-      else
-        fprintf(logfile, "%u\t%7" PRIu64 "\t%7.5lf\t%s\n",
-                i+1,
-                set1_sample_size[s],
-                set1_sample_freq[s],
-                db_getsamplename(d1, s));
       sum_size += set1_sample_size[s];
       sum_freq += set1_sample_freq[s];
     }
-  if (opt_ignore_frequency)
-    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.0lf\n", sum_size, sum_freq);
-  else
-    fprintf(logfile, "Sum\t%" PRIu64 "\t%7.5lf\n", sum_size, sum_freq);
-  fprintf(logfile, "\n");
+
+  int w1 = MAX(3, 1 + floor(log10(set1_samples)));
+  int w2 = MAX(9, 1 + floor(log10(sum_size)));
+  int w3 = MAX(5, 1 + floor(log10(sum_freq)));
+
+  fprintf(logfile, "Repertoires:\n");
+  fprintf(logfile, "%-*s %*s %*s %s\n",
+          w1, "#",
+          w2, "Sequences",
+          w3, "Count",
+          "Repertoire ID");
+  for (unsigned int i = 0; i < set1_samples; i++)
+    {
+      unsigned int s = set1_lookup_sample[i];
+      fprintf(logfile, "%*u %*" PRIu64 " %*.0lf %s\n",
+              w1, i+1,
+              w2, set1_sample_size[s],
+              w3, set1_sample_freq[s],
+              db_getsamplename(d1, s));
+    }
+  fprintf(logfile, "%-*s %*" PRIu64 " %*.0lf\n\n",
+          w1, "Sum",
+          w2, sum_size,
+          w3, sum_freq);
 
 
   /**** Set 2 ****/
 
+  fprintf(logfile, "Immune receptor repertoire set 2\n\n");
+
   if (set2_filename && strcmp(set1_filename, set2_filename))
     {
-      fprintf(logfile, "Immune receptor repertoire set 2\n");
-
       d2 = db_create();
       db_read(d2, set2_filename);
 
@@ -417,7 +423,7 @@ void overlap(char * set1_filename, char * set2_filename)
         {
           unsigned int t = db_getsampleno(d2, j);
           set2_sample_size[t]++;
-          set2_sample_freq[t] += db_get_freq(d2, j);
+          set2_sample_freq[t] += db_get_count(d2, j);
         }
 
       /* set 2 : sort samples alphanumerically for display */
@@ -431,34 +437,40 @@ void overlap(char * set1_filename, char * set2_filename)
             sizeof(unsigned int),
             set2_compare_by_sample_name);
 
-      /* list of samples in set 2 */
+      /* list of repertoires in set 2 */
 
       sum_size = 0;
       sum_freq = 0.0;
-      fprintf(logfile, "#no\tseqs\tfreq\tsample\n");
-      for (unsigned int j = 0; j < set2_samples; j++)
+      for (unsigned int i = 0; i < set2_samples; i++)
         {
-          unsigned int t = set2_lookup_sample[j];
-          if (opt_ignore_frequency)
-            fprintf(logfile, "%u\t%7" PRIu64 "\t%7.0lf\t%s\n",
-                    j+1,
-                    set2_sample_size[t],
-                    set2_sample_freq[t],
-                    db_getsamplename(d2, t));
-          else
-            fprintf(logfile, "%u\t%7" PRIu64 "\t%7.5lf\t%s\n",
-                    j+1,
-                    set2_sample_size[t],
-                    set2_sample_freq[t],
-                    db_getsamplename(d2, t));
-          sum_size += set2_sample_size[t];
-          sum_freq += set2_sample_freq[t];
+          unsigned int s = set2_lookup_sample[i];
+          sum_size += set2_sample_size[s];
+          sum_freq += set2_sample_freq[s];
         }
-      if (opt_ignore_frequency)
-        fprintf(logfile, "Sum\t%" PRIu64 "\t%7.0lf\n", sum_size, sum_freq);
-      else
-        fprintf(logfile, "Sum\t%" PRIu64 "\t%7.5lf\n", sum_size, sum_freq);
-      fprintf(logfile, "\n");
+
+      int w1 = MAX(3, 1 + floor(log10(set2_samples)));
+      int w2 = MAX(9, 1 + floor(log10(sum_size)));
+      int w3 = MAX(5, 1 + floor(log10(sum_freq)));
+
+      fprintf(logfile, "Repertoires:\n");
+      fprintf(logfile, "%-*s %*s %*s %s\n",
+              w1, "#",
+              w2, "Sequences",
+              w3, "Count",
+              "Repertoire ID");
+      for (unsigned int i = 0; i < set2_samples; i++)
+        {
+          unsigned int s = set2_lookup_sample[i];
+          fprintf(logfile, "%*u %*" PRIu64 " %*.0lf %s\n",
+                  w1, i+1,
+                  w2, set2_sample_size[s],
+                  w3, set2_sample_freq[s],
+                  db_getsamplename(d2, s));
+        }
+      fprintf(logfile, "%-*s %*" PRIu64 " %*.0lf\n\n",
+              w1, "Sum",
+              w2, sum_size,
+              w3, sum_freq);
     }
   else
     {
@@ -466,8 +478,7 @@ void overlap(char * set1_filename, char * set2_filename)
 
       d2 = d1;
 
-      fprintf(logfile, "Immune receptor repertoire set 2\n");
-      fprintf(logfile, "Same as set 1\n");
+      fprintf(logfile, "Set 2 is identical to set 1\n");
       fprintf(logfile, "\n");
 
       set2_longestsequence = db_getlongestsequence(d2);
@@ -505,7 +516,7 @@ void overlap(char * set1_filename, char * set2_filename)
   /* hashing into hash table & bloom filter */
 
   hashtable = hash_init(set2_sequences);
-  bloom_a = bloom_init(hash_get_tablesize(hashtable) * 2);
+  bloom_a = bloom_init(hash_get_tablesize(hashtable));
   progress_init("Hashing sequences:", set2_sequences);
   for(uint64_t i=0; i < set2_sequences; i++)
     {
@@ -566,7 +577,7 @@ void overlap(char * set1_filename, char * set2_filename)
     }
   else
     {
-      fprintf(outfile, "#sample");
+      fprintf(outfile, "#");
       for (unsigned int j = 0; j < set2_samples; j++)
         fprintf(outfile, "\t%s", db_getsamplename(d2, set2_lookup_sample[j]));
       fprintf(outfile, "\n");

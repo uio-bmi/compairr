@@ -49,7 +49,7 @@ static char * input2_filename;
 bool opt_alternative;
 bool opt_cluster;
 bool opt_help;
-bool opt_ignore_frequency;
+bool opt_ignore_counts;
 bool opt_ignore_genes;
 bool opt_indels;
 bool opt_matrix;
@@ -97,8 +97,8 @@ void args_show()
     fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename ? input2_filename : "(same as set 1)");
   fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
-  fprintf(logfile, "Ignore freq. (f):  %s\n",
-          opt_ignore_frequency ? "Yes" : "No");
+  fprintf(logfile, "Ignore counts (f): %s\n",
+          opt_ignore_counts ? "Yes" : "No");
   fprintf(logfile, "Ignore genes (g):  %s\n",
           opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Output file (o):   %s\n", opt_output);
@@ -119,7 +119,7 @@ void args_usage()
   fprintf(stderr, "General options:\n");
   fprintf(stderr, " -d, --differences INTEGER   number (0-2) of differences accepted (0)\n");
   fprintf(stderr, " -i, --indels                allow insertions or deletions\n");
-  fprintf(stderr, " -f, --ignore-frequency      ignore frequency / read count information\n");
+  fprintf(stderr, " -f, --ignore-counts         ignore duplicate_count information\n");
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
   fprintf(stderr, "\n");
@@ -132,11 +132,9 @@ void args_usage()
 
 void show_header()
 {
-  fprintf(logfile,
-          "%s %s - %s\n\n",
-          PROG_NAME,
-          PROG_VERSION,
-          PROG_BRIEF);
+  fprintf(logfile, "%s %s - %s\n", PROG_NAME, PROG_VERSION, PROG_BRIEF);
+  fprintf(logfile, "https://github.com/uio-bmi/compairr\n");
+  fprintf(logfile, "\n");
 }
 
 void args_init(int argc, char **argv)
@@ -149,7 +147,7 @@ void args_init(int argc, char **argv)
 
   opt_alternative = 0;
   opt_differences = 0;
-  opt_ignore_frequency = 0;
+  opt_ignore_counts = 0;
   opt_ignore_genes = 0;
   opt_help = 0;
   opt_indels = 0;
@@ -169,7 +167,7 @@ void args_init(int argc, char **argv)
     {"alternative",      no_argument,       nullptr, 'a' },
     {"cluster",          no_argument,       nullptr, 'c' },
     {"differences",      required_argument, nullptr, 'd' },
-    {"ignore-frequency", no_argument,       nullptr, 'f' },
+    {"ignore-counts",    no_argument,       nullptr, 'f' },
     {"ignore-genes",     no_argument,       nullptr, 'g' },
     {"help",             no_argument,       nullptr, 'h' },
     {"indels",           no_argument,       nullptr, 'i' },
@@ -236,8 +234,8 @@ void args_init(int argc, char **argv)
         break;
 
       case 'f':
-        /* ignore-frequency */
-        opt_ignore_frequency = 1;
+        /* ignore-counts */
+        opt_ignore_counts = 1;
         break;
 
       case 'g':
