@@ -287,13 +287,13 @@ with CompAIRR version 0.0.3. The timing results are shown below.
 
 Distance | Indels | Threads | Time (s) | Time (mm:ss)
 -------: | :----: | ------: | -------: | -----------:
-       0 |   no   |       1 |       72 |         1.12
-       0 |   no   |       4 |       68 |         1.08
-       1 |   no   |       1 |      159 |         2.39
-       1 |   no   |       4 |       97 |         1.37
-       1 |   yes  |       1 |      236 |         3.56
-       1 |   yes  |       4 |      123 |         2.03
-       2 |   no   |       4 |     2871 |        48.51
+0 | no | 1 | 72 | 1.12
+0 | no | 4 | 68 | 1.08
+1 | no | 1 | 159 | 2.39
+1 | no | 4 | 97 | 1.37
+1 | yes | 1 | 236 | 3.56
+1 | yes | 4 | 123 | 2.03
+2 | no | 4 | 2871 | 48.51
 
 When the distance is zero almost all of the time was used to read
 files.
