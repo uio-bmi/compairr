@@ -53,10 +53,10 @@ struct seqinfo_s
   uint64_t hash;
   char * seq;
   short seqlen;
-  unsigned int sample_no;
+  unsigned int repertoire_id_no;
   short v_gene_no;
   short j_gene_no;
-  double freq;
+  uint64_t count;
 };
 
 typedef struct seqinfo_s seqinfo_t;
@@ -71,9 +71,9 @@ struct db
   char * residues_p;
   uint64_t residues_alloc;
   uint64_t residues_count;
-  char * * sample_list;
-  uint64_t sample_alloc;
-  uint64_t sample_count;
+  char * * repertoire_id_list;
+  uint64_t repertoire_id_alloc;
+  uint64_t repertoire_count;
 };
 
 static char * * v_gene_list = 0;
@@ -144,14 +144,14 @@ uint64_t list_insert(char * * * list,
   return c;
 }
 
-int compare_bysample(const void * a, const void * b)
+int compare_byrepertoire_id(const void * a, const void * b)
 {
   const seqinfo_s * x = (const seqinfo_s *) a;
   const seqinfo_s * y = (const seqinfo_s *) b;
 
-  if (x->sample_no < y->sample_no)
+  if (x->repertoire_id_no < y->repertoire_id_no)
     return -1;
-  else if (x->sample_no > y->sample_no)
+  else if (x->repertoire_id_no > y->repertoire_id_no)
     return +1;
   else
     return 0;
@@ -169,9 +169,9 @@ struct db * db_create()
   d->residues_p = nullptr;
   d->residues_alloc = 0;
   d->residues_count = 0;
-  d->sample_list = nullptr;
-  d->sample_alloc = 0;
-  d->sample_count = 0;
+  d->repertoire_id_list = nullptr;
+  d->repertoire_id_alloc = 0;
+  d->repertoire_count = 0;
 
   return d;
 }
@@ -381,16 +381,16 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
                                       & j_gene_count,
                                       j_call);
 
-  uint64_t sample_index = list_insert(& d->sample_list,
-                                      & d->sample_alloc,
-                                      & d->sample_count,
+  uint64_t repertoire_id_index = list_insert(& d->repertoire_id_list,
+                                      & d->repertoire_id_alloc,
+                                      & d->repertoire_count,
                                       repertoire_id);
 
   p->seqlen = seqlen;
-  p->sample_no = sample_index;
+  p->repertoire_id_no = repertoire_id_index;
   p->v_gene_no = v_gene_index;
   p->j_gene_no = j_gene_index;
-  p->freq = count;
+  p->count = count;
   p->hash = 0;
 
   if (seqlen > d->longest)
@@ -537,7 +537,7 @@ void db_read(struct db * d, const char * filename)
           d->longest,
           1.0 * d->residues_count / d->sequences);
 
-  fprintf(logfile, "Repertoires:       %" PRIu64 "\n", d->sample_count);
+  fprintf(logfile, "Repertoires:       %" PRIu64 "\n", d->repertoire_count);
 
   /* add sequence pointers to index table */
 
@@ -552,10 +552,10 @@ void db_read(struct db * d, const char * filename)
     }
   progress_done();
 
-  /* sort sequences by sample */
+  /* sort sequences by repertoire_id */
 
   progress_init("Sorting:          ", 1);
-  qsort(d->seqindex, d->sequences, sizeof(seqinfo_s), compare_bysample);
+  qsort(d->seqindex, d->sequences, sizeof(seqinfo_s), compare_byrepertoire_id);
   progress_done();
 }
 
@@ -576,15 +576,15 @@ void db_hash(struct db * d)
 
 void db_free(struct db * d)
 {
-  if (d->sample_list)
+  if (d->repertoire_id_list)
     {
-      for (uint64_t i = 0; i < d->sample_count; i++)
+      for (uint64_t i = 0; i < d->repertoire_count; i++)
 	{
-	  xfree(d->sample_list[i]);
-	  d->sample_list[i] = 0;
+	  xfree(d->repertoire_id_list[i]);
+	  d->repertoire_id_list[i] = 0;
 	}
-      xfree(d->sample_list);
-      d->sample_list = 0;
+      xfree(d->repertoire_id_list);
+      d->repertoire_id_list = 0;
     }
 
   if (d->residues_p)
@@ -609,9 +609,9 @@ unsigned int db_getlongestsequence(struct db * d)
   return d->longest;
 }
 
-uint64_t db_getsamplecount(struct db * d)
+uint64_t db_get_repertoire_count(struct db * d)
 {
-  return d->sample_count;
+  return d->repertoire_count;
 }
 
 uint64_t db_gethash(struct db * d, uint64_t seqno)
@@ -639,19 +639,19 @@ uint64_t db_get_j_gene(struct db * d, uint64_t seqno)
   return d->seqindex[seqno].j_gene_no;
 }
 
-double db_get_count(struct db * d, uint64_t seqno)
+uint64_t db_get_count(struct db * d, uint64_t seqno)
 {
-  return opt_ignore_counts ? 1.0 : d->seqindex[seqno].freq;
+  return opt_ignore_counts ? 1 : d->seqindex[seqno].count;
 }
 
-uint64_t db_getsampleno(struct db * d, uint64_t seqno)
+uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno)
 {
-  return d->seqindex[seqno].sample_no;
+  return d->seqindex[seqno].repertoire_id_no;
 }
 
-char * db_getsamplename(struct db * d, uint64_t sample_no)
+char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no)
 {
-  return d->sample_list[sample_no];
+  return d->repertoire_id_list[repertoire_id_no];
 }
 
 uint64_t db_get_v_gene_count()

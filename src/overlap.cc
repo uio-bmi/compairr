@@ -25,62 +25,62 @@ static struct db * d1;
 static unsigned int set1_longestsequence = 0;
 static uint64_t set1_sequences = 0;
 static uint64_t set1_residues = 0;
-static uint64_t set1_samples = 0;
-static uint64_t * set1_sample_size = nullptr;
-static double * set1_sample_freq = nullptr;
-static unsigned int * set1_lookup_sample = nullptr;
+static uint64_t set1_repertoires = 0;
+static uint64_t * set1_repertoire_size = nullptr;
+static uint64_t * set1_repertoire_count = nullptr;
+static unsigned int * set1_lookup_repertoire = nullptr;
 
 static struct db * d2;
 static unsigned int set2_longestsequence = 0;
 static uint64_t set2_sequences = 0;
 static uint64_t set2_residues = 0;
-static uint64_t set2_samples = 0;
-static uint64_t * set2_sample_size = nullptr;
-static double * set2_sample_freq = nullptr;
-static unsigned int * set2_lookup_sample = nullptr;
+static uint64_t set2_repertoires = 0;
+static uint64_t * set2_repertoire_size = nullptr;
+static uint64_t * set2_repertoire_count = nullptr;
+static unsigned int * set2_lookup_repertoire = nullptr;
 
 static pthread_mutex_t network_mutex;
-static uint64_t network_amp = 0;
+static uint64_t network_progress = 0;
 static struct bloom_s * bloom_a = nullptr; // Bloom filter for sequences
-static double * sample_matrix = nullptr;
+static uint64_t * repertoire_matrix = nullptr;
 static hashtable_s * hashtable = nullptr;
 
 //#define AVOID_DUPLICATES 1
 
 const uint64_t CHUNK = 1000;
 
-void hash_insert(uint64_t amp)
+void hash_insert(uint64_t rearr)
 {
   /* set 2 */
   /* find the first empty bucket */
-  uint64_t hash = db_gethash(d2, amp);
+  uint64_t hash = db_gethash(d2, rearr);
   uint64_t j = hash_getindex(hashtable, hash);
   while (hash_is_occupied(hashtable, j))
     j = hash_getnextindex(hashtable, j);
 
   hash_set_occupied(hashtable, j);
   hash_set_value(hashtable, j, hash);
-  hash_set_data(hashtable, j, amp);
+  hash_set_data(hashtable, j, rearr);
   bloom_set(bloom_a, hash);
 }
 
-int set1_compare_by_sample_name(const void * a, const void * b)
+int set1_compare_by_repertoire_name(const void * a, const void * b)
 {
   const unsigned int * x = (const unsigned int *) a;
   const unsigned int * y = (const unsigned int *) b;
-  return strcmp(db_getsamplename(d1, *x), db_getsamplename(d1, *y));
+  return strcmp(db_get_repertoire_id(d1, *x), db_get_repertoire_id(d1, *y));
 }
 
-int set2_compare_by_sample_name(const void * a, const void * b)
+int set2_compare_by_repertoire_name(const void * a, const void * b)
 {
   const unsigned int * x = (const unsigned int *) a;
   const unsigned int * y = (const unsigned int *) b;
-  return strcmp(db_getsamplename(d2, *x), db_getsamplename(d2, *y));
+  return strcmp(db_get_repertoire_id(d2, *x), db_get_repertoire_id(d2, *y));
 }
 
 void find_variant_matches(uint64_t seed,
                           var_s * var,
-                          double * sample_matrix,
+                          uint64_t * repertoire_matrix,
                           struct bloom_s * bloom_d)
 {
   /* seed in set 1, amp in set 2 */
@@ -95,37 +95,37 @@ void find_variant_matches(uint64_t seed,
     {
       if (hash_compare_value(hashtable, j, var->hash))
         {
-          uint64_t amp = hash_get_data(hashtable, j);
+          uint64_t hit = hash_get_data(hashtable, j);
 
           /* double check that everything matches */
 
           unsigned int seed_v_gene = db_get_v_gene(d1, seed);
           unsigned int seed_j_gene = db_get_j_gene(d1, seed);
 
-          unsigned int amp_v_gene = db_get_v_gene(d2, amp);
-          unsigned int amp_j_gene = db_get_j_gene(d2, amp);
+          unsigned int hit_v_gene = db_get_v_gene(d2, hit);
+          unsigned int hit_j_gene = db_get_j_gene(d2, hit);
 
           if (opt_ignore_genes ||
-              ((seed_v_gene == amp_v_gene) && (seed_j_gene == amp_j_gene)))
+              ((seed_v_gene == hit_v_gene) && (seed_j_gene == hit_j_gene)))
             {
               unsigned char * seed_sequence
                 = (unsigned char *) db_getsequence(d1, seed);
               unsigned int seed_seqlen
                 = db_getsequencelen(d1, seed);
-              unsigned char * amp_sequence
-                = (unsigned char *) db_getsequence(d2, amp);
-              unsigned int amp_seqlen
-                = db_getsequencelen(d2, amp);
+              unsigned char * hit_sequence
+                = (unsigned char *) db_getsequence(d2, hit);
+              unsigned int hit_seqlen
+                = db_getsequencelen(d2, hit);
 
               if (check_variant(seed_sequence, seed_seqlen,
                                 var,
-                                amp_sequence, amp_seqlen))
+                                hit_sequence, hit_seqlen))
                 {
-                  unsigned int i = db_getsampleno(d1, seed);
-                  unsigned int j = db_getsampleno(d2, amp);
-                  double f = db_get_count(d1, seed);
-                  double g = db_get_count(d2, amp);
-                  sample_matrix[set2_samples * i + j] += f * g;
+                  unsigned int i = db_get_repertoire_id_no(d1, seed);
+                  unsigned int j = db_get_repertoire_id_no(d2, hit);
+                  uint64_t f = db_get_count(d1, seed);
+                  uint64_t g = db_get_count(d2, hit);
+                  repertoire_matrix[set2_repertoires * i + j] += f * g;
 
                   if (bloom_d)
                     bloom_set(bloom_d, var->hash);
@@ -138,7 +138,7 @@ void find_variant_matches(uint64_t seed,
 
 void process_variants(uint64_t seed,
                       var_s * variant_list,
-                      double * sample_matrix)
+                      uint64_t * repertoire_matrix)
 {
   unsigned int variant_count = 0;
   unsigned char * sequence = (unsigned char *) db_getsequence(d1, seed);
@@ -156,14 +156,14 @@ void process_variants(uint64_t seed,
       var_s * var = variant_list + i;
       if (bloom_get(bloom_a, var->hash))
         {
-          find_variant_matches(seed, var, sample_matrix, nullptr);
+          find_variant_matches(seed, var, repertoire_matrix, nullptr);
         }
     }
 }
 
 void process_variants_avoid_duplicates(uint64_t seed,
                                        var_s * variant_list,
-                                       double * sample_matrix,
+                                       uint64_t * repertoire_matrix,
                                        struct bloom_s * bloom_d)
 {
   unsigned int variant_count = 0;
@@ -237,7 +237,7 @@ void process_variants_avoid_duplicates(uint64_t seed,
             }
 
           if (!dup)
-            find_variant_matches(seed, var, sample_matrix, bloom_d);
+            find_variant_matches(seed, var, repertoire_matrix, bloom_d);
         }
     }
 }
@@ -251,11 +251,11 @@ void sim_thread(int64_t t)
   struct var_s * variant_list = static_cast<struct var_s *>
     (xmalloc(maxvar * sizeof(struct var_s)));
 
-  double * sample_matrix_local = static_cast<double *>
-    (xmalloc(set1_samples * set2_samples * sizeof(double)));
+  uint64_t * repertoire_matrix_local = static_cast<uint64_t *>
+    (xmalloc(set1_repertoires * set2_repertoires * sizeof(uint64_t)));
 
-  for(uint64_t k = 0; k < set1_samples * set2_samples; k++)
-    sample_matrix_local[k] = 0;
+  for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+    repertoire_matrix_local[k] = 0;
 
 #ifdef AVOID_DUPLICATES
   /* init bloom filter for duplicates */
@@ -267,14 +267,14 @@ void sim_thread(int64_t t)
 
   pthread_mutex_lock(&network_mutex);
 
-  while (network_amp < set1_sequences)
+  while (network_progress < set1_sequences)
     {
-      uint64_t firstseed = network_amp;
-      network_amp += CHUNK;
-      if (network_amp > set1_sequences)
-        network_amp = set1_sequences;
-      progress_update(network_amp);
-      uint64_t chunksize = network_amp - firstseed;
+      uint64_t firstseed = network_progress;
+      network_progress += CHUNK;
+      if (network_progress > set1_sequences)
+        network_progress = set1_sequences;
+      progress_update(network_progress);
+      uint64_t chunksize = network_progress - firstseed;
 
       pthread_mutex_unlock(&network_mutex);
 
@@ -284,19 +284,19 @@ void sim_thread(int64_t t)
           uint64_t seed = firstseed + z;
 
 #ifdef AVOID_DUPLICATES
-          process_variants_avoid_duplicates(seed, variant_list, sample_matrix_local, bloom_d);
+          process_variants_avoid_duplicates(seed, variant_list, repertoire_matrix_local, bloom_d);
 #else
-          process_variants(seed, variant_list, sample_matrix_local);
+          process_variants(seed, variant_list, repertoire_matrix_local);
 #endif
         }
 
-      /* lock mutex and update global sample_matrix */
+      /* lock mutex and update global repertoire_matrix */
       pthread_mutex_lock(&network_mutex);
     }
 
-  /* update global sample_matrix */
-  for(uint64_t k = 0; k < set1_samples * set2_samples; k++)
-    sample_matrix[k] += sample_matrix_local[k];
+  /* update global repertoire_matrix */
+  for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+    repertoire_matrix[k] += repertoire_matrix_local[k];
 
   pthread_mutex_unlock(&network_mutex);
 
@@ -304,13 +304,13 @@ void sim_thread(int64_t t)
   bloom_exit(bloom_d);
 #endif
 
-  xfree(sample_matrix_local);
+  xfree(repertoire_matrix_local);
   xfree(variant_list);
 }
 
 void overlap(char * set1_filename, char * set2_filename)
 {
-  /* find overlaps between repertoires of samples */
+  /* find overlaps between repertoires of repertoires */
 
   db_init();
 
@@ -324,73 +324,73 @@ void overlap(char * set1_filename, char * set2_filename)
 
   set1_longestsequence = db_getlongestsequence(d1);
   set1_sequences = db_getsequencecount(d1);
-  set1_samples = db_getsamplecount(d1);
+  set1_repertoires = db_get_repertoire_count(d1);
   set1_residues = db_getresiduescount(d1);
 
   fprintf(logfile, "\n");
 
-  /* determine number of sequences in each of the samples (Set 1) */
+  /* determine number of sequences in each of the repertoires (Set 1) */
 
-  set1_sample_size = static_cast<uint64_t *>
-    (xmalloc(sizeof(uint64_t) * set1_samples));
-  for (unsigned int s = 0; s < set1_samples ; s++)
-    set1_sample_size[s] = 0;
-  set1_sample_freq = static_cast<double *>
-    (xmalloc(sizeof(double) * set1_samples));
-  for (unsigned int s = 0; s < set1_samples ; s++)
-    set1_sample_freq[s] = 0.0;
+  set1_repertoire_size = static_cast<uint64_t *>
+    (xmalloc(sizeof(uint64_t) * set1_repertoires));
+  for (unsigned int s = 0; s < set1_repertoires ; s++)
+    set1_repertoire_size[s] = 0;
+  set1_repertoire_count = static_cast<uint64_t *>
+    (xmalloc(sizeof(uint64_t) * set1_repertoires));
+  for (unsigned int s = 0; s < set1_repertoires ; s++)
+    set1_repertoire_count[s] = 0;
   for (uint64_t i = 0; i < set1_sequences ; i++)
     {
-      unsigned int s = db_getsampleno(d1, i);
-      set1_sample_size[s]++;
-      set1_sample_freq[s] += db_get_count(d1, i);
+      unsigned int s = db_get_repertoire_id_no(d1, i);
+      set1_repertoire_size[s]++;
+      set1_repertoire_count[s] += db_get_count(d1, i);
     }
 
-  /* set 1 : sort samples alphanumerically for display */
+  /* set 1 : sort repertoires alphanumerically for display */
 
-  set1_lookup_sample =
-    (unsigned int *) xmalloc(sizeof(unsigned int) * set1_samples);
-  for (unsigned int i = 0; i < set1_samples; i++)
-    set1_lookup_sample[i] = i;
-  qsort(set1_lookup_sample,
-        set1_samples,
+  set1_lookup_repertoire =
+    (unsigned int *) xmalloc(sizeof(unsigned int) * set1_repertoires);
+  for (unsigned int i = 0; i < set1_repertoires; i++)
+    set1_lookup_repertoire[i] = i;
+  qsort(set1_lookup_repertoire,
+        set1_repertoires,
         sizeof(unsigned int),
-        set1_compare_by_sample_name);
+        set1_compare_by_repertoire_name);
 
   /* list of repertoires in set 1 */
 
   uint64_t sum_size = 0;
-  double sum_freq = 0.0;
-  for (unsigned int i = 0; i < set1_samples; i++)
+  uint64_t sum_count = 0;
+  for (unsigned int i = 0; i < set1_repertoires; i++)
     {
-      unsigned int s = set1_lookup_sample[i];
-      sum_size += set1_sample_size[s];
-      sum_freq += set1_sample_freq[s];
+      unsigned int s = set1_lookup_repertoire[i];
+      sum_size += set1_repertoire_size[s];
+      sum_count += set1_repertoire_count[s];
     }
 
-  int w1 = MAX(3, 1 + floor(log10(set1_samples)));
+  int w1 = MAX(3, 1 + floor(log10(set1_repertoires)));
   int w2 = MAX(9, 1 + floor(log10(sum_size)));
-  int w3 = MAX(5, 1 + floor(log10(sum_freq)));
+  int w3 = MAX(5, 1 + floor(log10(sum_count)));
 
   fprintf(logfile, "Repertoires:\n");
-  fprintf(logfile, "%-*s %*s %*s %s\n",
+  fprintf(logfile, "%*s %*s %*s %s\n",
           w1, "#",
           w2, "Sequences",
           w3, "Count",
           "Repertoire ID");
-  for (unsigned int i = 0; i < set1_samples; i++)
+  for (unsigned int i = 0; i < set1_repertoires; i++)
     {
-      unsigned int s = set1_lookup_sample[i];
-      fprintf(logfile, "%*u %*" PRIu64 " %*.0lf %s\n",
+      unsigned int s = set1_lookup_repertoire[i];
+      fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
               w1, i+1,
-              w2, set1_sample_size[s],
-              w3, set1_sample_freq[s],
-              db_getsamplename(d1, s));
+              w2, set1_repertoire_size[s],
+              w3, set1_repertoire_count[s],
+              db_get_repertoire_id(d1, s));
     }
-  fprintf(logfile, "%-*s %*" PRIu64 " %*.0lf\n\n",
+  fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n\n",
           w1, "Sum",
           w2, sum_size,
-          w3, sum_freq);
+          w3, sum_count);
 
 
   /**** Set 2 ****/
@@ -404,73 +404,73 @@ void overlap(char * set1_filename, char * set2_filename)
 
       set2_longestsequence = db_getlongestsequence(d2);
       set2_sequences = db_getsequencecount(d2);
-      set2_samples = db_getsamplecount(d2);
+      set2_repertoires = db_get_repertoire_count(d2);
       set2_residues = db_getresiduescount(d2);
 
       fprintf(logfile, "\n");
 
-      /* determine number of sequences in each of the samples (Set 2) */
+      /* determine number of sequences in each of the repertoires (Set 2) */
 
-      set2_sample_size = static_cast<uint64_t *>
-        (xmalloc(sizeof(uint64_t) * set2_samples));
-      for (unsigned int t = 0; t < set2_samples ; t++)
-        set2_sample_size[t] = 0;
-      set2_sample_freq = static_cast<double *>
-        (xmalloc(sizeof(double) * set2_samples));
-      for (unsigned int t = 0; t < set2_samples ; t++)
-        set2_sample_freq[t] = 0.0;
+      set2_repertoire_size = static_cast<uint64_t *>
+        (xmalloc(sizeof(uint64_t) * set2_repertoires));
+      for (unsigned int t = 0; t < set2_repertoires ; t++)
+        set2_repertoire_size[t] = 0;
+      set2_repertoire_count = static_cast<uint64_t *>
+        (xmalloc(sizeof(uint64_t) * set2_repertoires));
+      for (unsigned int t = 0; t < set2_repertoires ; t++)
+        set2_repertoire_count[t] = 0;
       for (uint64_t j = 0; j < set2_sequences ; j++)
         {
-          unsigned int t = db_getsampleno(d2, j);
-          set2_sample_size[t]++;
-          set2_sample_freq[t] += db_get_count(d2, j);
+          unsigned int t = db_get_repertoire_id_no(d2, j);
+          set2_repertoire_size[t]++;
+          set2_repertoire_count[t] += db_get_count(d2, j);
         }
 
-      /* set 2 : sort samples alphanumerically for display */
+      /* set 2 : sort repertoires alphanumerically for display */
 
-      set2_lookup_sample =
-        (unsigned int *) xmalloc(sizeof(unsigned int) * set2_samples);
-      for (unsigned int j = 0; j < set2_samples; j++)
-        set2_lookup_sample[j] = j;
-      qsort(set2_lookup_sample,
-            set2_samples,
+      set2_lookup_repertoire =
+        (unsigned int *) xmalloc(sizeof(unsigned int) * set2_repertoires);
+      for (unsigned int j = 0; j < set2_repertoires; j++)
+        set2_lookup_repertoire[j] = j;
+      qsort(set2_lookup_repertoire,
+            set2_repertoires,
             sizeof(unsigned int),
-            set2_compare_by_sample_name);
+            set2_compare_by_repertoire_name);
 
       /* list of repertoires in set 2 */
 
       sum_size = 0;
-      sum_freq = 0.0;
-      for (unsigned int i = 0; i < set2_samples; i++)
+      sum_count = 0;
+      for (unsigned int i = 0; i < set2_repertoires; i++)
         {
-          unsigned int s = set2_lookup_sample[i];
-          sum_size += set2_sample_size[s];
-          sum_freq += set2_sample_freq[s];
+          unsigned int s = set2_lookup_repertoire[i];
+          sum_size += set2_repertoire_size[s];
+          sum_count += set2_repertoire_count[s];
         }
 
-      int w1 = MAX(3, 1 + floor(log10(set2_samples)));
+      int w1 = MAX(3, 1 + floor(log10(set2_repertoires)));
       int w2 = MAX(9, 1 + floor(log10(sum_size)));
-      int w3 = MAX(5, 1 + floor(log10(sum_freq)));
+      int w3 = MAX(5, 1 + floor(log10(sum_count)));
 
       fprintf(logfile, "Repertoires:\n");
-      fprintf(logfile, "%-*s %*s %*s %s\n",
+      fprintf(logfile, "%*s %*s %*s %s\n",
               w1, "#",
               w2, "Sequences",
               w3, "Count",
               "Repertoire ID");
-      for (unsigned int i = 0; i < set2_samples; i++)
+      for (unsigned int i = 0; i < set2_repertoires; i++)
         {
-          unsigned int s = set2_lookup_sample[i];
-          fprintf(logfile, "%*u %*" PRIu64 " %*.0lf %s\n",
+          unsigned int s = set2_lookup_repertoire[i];
+          fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
                   w1, i+1,
-                  w2, set2_sample_size[s],
-                  w3, set2_sample_freq[s],
-                  db_getsamplename(d2, s));
+                  w2, set2_repertoire_size[s],
+                  w3, set2_repertoire_count[s],
+                  db_get_repertoire_id(d2, s));
         }
-      fprintf(logfile, "%-*s %*" PRIu64 " %*.0lf\n\n",
+      fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n\n",
               w1, "Sum",
               w2, sum_size,
-              w3, sum_freq);
+              w3, sum_count);
     }
   else
     {
@@ -483,12 +483,12 @@ void overlap(char * set1_filename, char * set2_filename)
 
       set2_longestsequence = db_getlongestsequence(d2);
       set2_sequences = db_getsequencecount(d2);
-      set2_samples = db_getsamplecount(d2);
+      set2_repertoires = db_get_repertoire_count(d2);
       set2_residues = db_getresiduescount(d2);
 
-      set2_sample_size = set1_sample_size;
-      set2_sample_freq = set1_sample_freq;
-      set2_lookup_sample = set1_lookup_sample;
+      set2_repertoire_size = set1_repertoire_size;
+      set2_repertoire_count = set1_repertoire_count;
+      set2_lookup_repertoire = set1_lookup_repertoire;
     }
 
 
@@ -525,14 +525,14 @@ void overlap(char * set1_filename, char * set2_filename)
     }
   progress_done();
 
-  /* allocate matrix of sample1 x sample2 counts */
+  /* allocate matrix of repertoire1 x repertoire2 counts */
 
-  sample_matrix = static_cast<double *>
-    (xmalloc(sizeof(double) * set1_samples * set2_samples));
+  repertoire_matrix = static_cast<uint64_t *>
+    (xmalloc(sizeof(uint64_t) * set1_repertoires * set2_repertoires));
 
-  for(unsigned int s = 0; s < set1_samples; s++)
-    for(unsigned int t = 0; t < set2_samples; t++)
-      sample_matrix[set2_samples * s + t] = 0;
+  for(unsigned int s = 0; s < set1_repertoires; s++)
+    for(unsigned int t = 0; t < set2_repertoires; t++)
+      repertoire_matrix[set2_repertoires * s + t] = 0;
 
   /* compare all sequences */
 
@@ -560,17 +560,17 @@ void overlap(char * set1_filename, char * set2_filename)
   progress_init("Writing results:  ", set1_sequences * set2_sequences);
   if (opt_alternative)
     {
-      for (unsigned int i = 0; i < set1_samples; i++)
+      for (unsigned int i = 0; i < set1_repertoires; i++)
         {
-          unsigned int s = set1_lookup_sample[i];
-          for (unsigned int j = 0; j < set2_samples; j++)
+          unsigned int s = set1_lookup_repertoire[i];
+          for (unsigned int j = 0; j < set2_repertoires; j++)
             {
-              unsigned int t = set2_lookup_sample[j];
+              unsigned int t = set2_lookup_repertoire[j];
               fprintf(outfile,
-                      "%s\t%s\t%15.9le\n",
-                      db_getsamplename(d1, s),
-                      db_getsamplename(d2, t),
-                      sample_matrix[set2_samples * s + t]);
+                      "%s\t%s\t%" PRIu64 "\n",
+                      db_get_repertoire_id(d1, s),
+                      db_get_repertoire_id(d2, t),
+                      repertoire_matrix[set2_repertoires * s + t]);
               x++;
             }
         }
@@ -578,17 +578,17 @@ void overlap(char * set1_filename, char * set2_filename)
   else
     {
       fprintf(outfile, "#");
-      for (unsigned int j = 0; j < set2_samples; j++)
-        fprintf(outfile, "\t%s", db_getsamplename(d2, set2_lookup_sample[j]));
+      for (unsigned int j = 0; j < set2_repertoires; j++)
+        fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
       fprintf(outfile, "\n");
-      for (unsigned int i = 0; i < set1_samples; i++)
+      for (unsigned int i = 0; i < set1_repertoires; i++)
         {
-          unsigned int s = set1_lookup_sample[i];
-          fprintf(outfile, "%s", db_getsamplename(d1, s));
-          for (unsigned int j = 0; j < set2_samples; j++)
+          unsigned int s = set1_lookup_repertoire[i];
+          fprintf(outfile, "%s", db_get_repertoire_id(d1, s));
+          for (unsigned int j = 0; j < set2_repertoires; j++)
             {
-              unsigned int t = set2_lookup_sample[j];
-              fprintf(outfile, "\t%15.9le", sample_matrix[set2_samples * s + t]);
+              unsigned int t = set2_lookup_repertoire[j];
+              fprintf(outfile, "\t%" PRIu64, repertoire_matrix[set2_repertoires * s + t]);
               x++;
               progress_update(x);
             }
@@ -599,8 +599,9 @@ void overlap(char * set1_filename, char * set2_filename)
 
   fprintf(logfile, "\n");
 
-  if (sample_matrix)
-    xfree(sample_matrix);
+  if (repertoire_matrix)
+    xfree(repertoire_matrix);
+  repertoire_matrix = nullptr;
 
   bloom_exit(bloom_a);
 
@@ -610,17 +611,22 @@ void overlap(char * set1_filename, char * set2_filename)
 
   if (d1 != d2)
     {
-      xfree(set2_lookup_sample);
-      xfree(set2_sample_freq);
-      xfree(set2_sample_size);
+      xfree(set2_lookup_repertoire);
+      xfree(set2_repertoire_count);
+      xfree(set2_repertoire_size);
       db_free(d2);
     }
   else
-    d2 = nullptr;
+    {
+      set2_lookup_repertoire = nullptr;
+      set2_repertoire_count = nullptr;
+      set2_repertoire_size = nullptr;
+      d2 = nullptr;
+    }
 
-  xfree(set1_lookup_sample);
-  xfree(set1_sample_freq);
-  xfree(set1_sample_size);
+  xfree(set1_lookup_repertoire);
+  xfree(set1_repertoire_count);
+  xfree(set1_repertoire_size);
   db_free(d1);
 
   db_exit();

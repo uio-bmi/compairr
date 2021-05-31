@@ -39,7 +39,7 @@ void db_read(struct db * d, const char * filename);
 
 uint64_t db_getsequencecount(struct db * d);
 
-uint64_t db_getsamplecount(struct db * d);
+uint64_t db_get_repertoire_count(struct db * d);
 
 uint64_t db_getresiduescount(struct db * d);
 
@@ -55,11 +55,11 @@ uint64_t db_get_v_gene(struct db * d, uint64_t seqno);
 
 uint64_t db_get_j_gene(struct db * d, uint64_t seqno);
 
-double db_get_count(struct db * d, uint64_t seqno);
+uint64_t db_get_count(struct db * d, uint64_t seqno);
 
-uint64_t db_getsampleno(struct db * d, uint64_t seqno);
+uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno);
 
-char * db_getsamplename(struct db * d, uint64_t sampleno);
+char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no);
 
 void db_hash(struct db * d);
 

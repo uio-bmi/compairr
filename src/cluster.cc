@@ -362,11 +362,11 @@ void cluster(char * filename)
           fprintf(outfile, "%u\t%u\t", i + 1, size);
           db_fprint_sequence(outfile, d, a);
           fprintf(outfile,
-                  "\t%15.9le\t%s\t%s\t%s\n",
+                  "\t%" PRIu64 "\t%s\t%s\t%s\n",
                   db_get_count(d, a),
                   db_get_v_gene_name(d, a),
                   db_get_j_gene_name(d, a),
-                  db_getsamplename(d, db_getsampleno(d, a)));
+                  db_get_repertoire_id(d, db_get_repertoire_id_no(d, a)));
           j++;
         }
       progress_update(j);

@@ -19,7 +19,8 @@ name has been specified with the `-o` or `--output-file` option.
 
 While the program is running it will print some status and progress
 information to standard error (stderr) unless a log file has been
-specified with the `-l` or `--log` option.
+specified with the `-l` or `--log` option. Error messages and warnings
+will also be written here.
 
 The user can specify whether 0, 1 or 2 differences are allowed when
 comparing sequences, using the option `-d` or `--differences`. To allow
@@ -40,36 +41,38 @@ For each of the two repertoire sets there must an input file of
 tab-separated values. The two input files are specified on the command
 line without any preceeding option letter. If only one filename is
 specified on the command line, or the same filename is specified
-twice, it is assumed that the set should be compared to itself.
+twice, it is assumed that the set should be compared to itself. Each
+file must contain the amino acid sequence of the rearrangement, the V
+gene, the J gene, the duplicate count and the repertoire ID.
 
-Each set can contain many repertoires (~1000) and each repertoire can
-contain many sequences (~100000).
+Each set can contain many repertoires and each repertoire can
+contain many sequences.
 
 The tool will find the sequences in the two sets that are similar and
 output a matrix with results.
 
-The similar sequences of each sample in each set are found by
-comparing the sequences and their V and J genes.  Their frequencies is
-taken into account and a matrix is output containing a value for each
-combination of samples in the two sets. The value is the sum of the
-products of the frequency of the two sequences that match in the two
-samples. If the option `-f` or `--ignore-frequency` is specified, the
-frequency information is ignored and all frequencies set to 1.0.
+The similar sequences of each repertoire in each set are found by
+comparing the sequences and their V and J genes.  The duplicate count
+of each sequence is taken into account and a matrix is output
+containing a value for each combination of repertoires in the two
+sets. The value is the sum of the products of the counts of all pairs of
+sequences in the two repertoires that match. If the option `-f` or
+`--ignore-frequency` is specified, the duplicate count information is
+ignored and all counts are set to 1.
 
 The output will be a matrix of values in a tab-separated plain text
-file. Two different formats can be selected.
-
-In the default format, the first line contains the text
-"#sample" followed by the sample names in the second set. The
-following lines contains the sample name in the first set, followed by
-the values corresponding to the comparison of this sample with each of
-the samples in the second set.
+file. Two different formats can be selected. In the default format,
+the first line contains the character '#' followed by the repertoire
+ID's from the second set. The following lines contains the repertoire
+ID from the first set, followed by the values corresponding to the
+comparison of this repertoire with each of the repertoires in the
+second set.
 
 An alternative output format is used when the `-a` or `--alternative`
 option is specified. It will write the results in a three column
-format with the sample names from set 1 and set 2 in the two first
+format with the repertoire ID from set 1 and set 2 in the two first
 columns, respectively, and the value in the third column. There will
-be one line for each combination of sample names in the sets.
+be one line for each combination of repertoires in the sets.
 
 
 ## Clustering the sequences in a repertoire
@@ -94,22 +97,30 @@ cluster. The clusters are sorted by size, in descending order.
 
 ## Input files
 
-The files must contain one line per sequence. The five columns are:
+The input files must be in tab-separated value (TSV) format accoring
+to the
+[Rearrangement Schema](https://docs.airr-community.org/en/stable/datarep/rearrangements.html)
+of the
+[AIRR standards 1.3 documentation](https://docs.airr-community.org/en/stable/).
 
-1. Amino acid sequence (single letter code)
-2. Frequency (floating point number, exponent allowed)
-3. V gene name
-4. J gene name
-5. Sample, repertoire or sequence name
+The first line must contain the header. The rest of the file must
+contain one line per sequence. The following fields are required:
 
-See below for an example. The program is currently a bit picky on the
-input.
+* junction_aa: amino acid sequence (single letter code)
+* duplicate_count: number of identical copies of the same rearrangement
+* v_call: V gene name with allele
+* j_call: J gene name with allele
+* repertoire_id: identifier of the repertoire
+
+See below for an example. Other fields may be included, but will be
+ignored.
 
 
 ## Command line options
 
 ```
 CompAIRR 0.1.0 - Compare Adaptive Immune Receptor Repertoires
+https://github.com/uio-bmi/compairr
 
 Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
 
@@ -122,7 +133,7 @@ Commands:
 General options:
  -d, --differences INTEGER   number (0-2) of differences accepted (0)
  -i, --indels                allow insertions or deletions
- -f, --ignore-frequency      ignore frequency / read count information
+ -f, --ignore-frequency      ignore duplicate count information
  -g, --ignore-genes          ignore V and J gene information
  -t, --threads INTEGER       number of threads to use (1)
 
@@ -138,16 +149,18 @@ Input/output options:
 Let's use two simple input files. The first is `seta.tsv`:
 
 ```
-CASSTSHEQYF	0.01	TCRBV07-06	TCRBJ02-01	A1
-CASSLRVGGYGYTF	0.03	TCRBV07-09	TCRBJ01-02	A2
+junction_aa	duplicate_count	v_call	j_call	repertoire_id
+CASSTSHEQYF	1	TCRBV07-06	TCRBJ02-01	A1
+CASSLRVGGYGYTF	3	TCRBV07-09	TCRBJ01-02	A2
 ```
 
 The second is `setb.tsv`:
 
 ```
-CASSLRVGGYGYTF	0.05	TCRBV07-09	TCRBJ01-02	B1
-CASSLRVGGFGYTF	0.1	TCRBV07-09	TCRBJ01-02	B1
-CASSTSHQQYF	0.07	TCRBV07-06	TCRBJ02-01	B2
+junction_aa	duplicate_count	v_call	j_call	repertoire_id
+CASSLRVGGYGYTF	5	TCRBV07-09	TCRBJ01-02	B1
+CASSLRVGGFGYTF	10	TCRBV07-09	TCRBJ01-02	B1
+CASSTSHQQYF	7	TCRBV07-06	TCRBJ02-01	B2
 ```
 
 We run the following command:
@@ -158,51 +171,54 @@ Here is the output to the console:
 
 ```
 CompAIRR 0.1.0 - Immune repertoire analysis
+https://github.com/uio-bmi/compairr
 
 Command:           Overlap
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
 Differences (d):   1
 Indels (i):        No
-Ignore freq. (f):  No
+Ignore counts (f): No
 Ignore genes (g):  No
 Output file (o):   output.tsv
 Output format (a): Matrix
 Threads: (t)       1
 
 Immune receptor repertoire set 1
+
 Reading sequences: 100%
 Sequences:         2
 Residues:          25
 Shortest:          11
 Longest:           14
 Average length:    12.5
-Samples:           2
-
+Repertoires:       2
 Indexing:          100%
 Sorting:           100%
 
-#no	seqs	freq	sample
-1	      1	0.01000	A1
-2	      1	0.03000	A2
-Sum	2	0.04000
+Repertoires:
+  # Sequences Count Repertoire ID
+  1         1     1 A1
+  2         1     3 A2
+Sum         2     4
 
 Immune receptor repertoire set 2
+
 Reading sequences: 100%
 Sequences:         3
 Residues:          39
 Shortest:          11
 Longest:           14
 Average length:    13.0
-Samples:           2
-
+Repertoires:       2
 Indexing:          100%
 Sorting:           100%
 
-#no	seqs	freq	sample
-1	      2	0.15000	B1
-2	      1	0.07000	B2
-Sum	3	0.22000
+Repertoires:
+  # Sequences Count Repertoire ID
+  1         2    15 B1
+  2         1     7 B2
+Sum         3    22
 
 Unique V genes:    2
 Unique J genes:    2
@@ -219,26 +235,26 @@ them.
 Here is the result in the `output.tsv` file:
 
 ```
-#sample	B1	B2
-A1	0.000000000e+00	7.000000000e-04
-A2	4.500000000e-03	0.000000000e+00
+#	B1	B2
+A1	0	7
+A2	45	0
 ```
 
-Here, the sequence in sample A1 is similar to the sequence in sample
-B2. The only difference is the E and Q in the 8th position. The gene
-names are also the same. They have frequencies of 0.01 and 0.07,
-respectively. The product is 0.0007 or 7.0e-04. That value is found in
-the third column on the second line in the output file.
+Here, the sequence in repertoire A1 is similar to the sequence in
+repertoire B2. The only difference is the E and Q in the 8th
+position. The gene names are also the same. They have duplicate counts
+of 1 and 7, respectively. The product is 7. That value is found in the
+third column on the second line in the output file.
 
-The sequence in sample A2 with frequency 0.03 is similar to both
-sequences in sample B1, with frequencies 0.1 and 0.07. The first
+The sequence in repertoire A2 with frequency 3 is similar to both
+sequences in repertoire B1, with frequencies 10 and 5. The first
 sequence in B1 is identical, while the second sequence in B1 has an F
-instead of a Y in the 10th position. The result is 0.03 * (0.05 + 0.1)
-= 0.03 * 0.15 = 0.0045 = 4.5e-03. That values is found in the second
+instead of a Y in the 10th position. The result is 3 * (5 + 10)
+= 3 * 15 = 45. That values is found in the second
 column on the third line.
 
-Since there are no sequences from sample A1 similar to B1 or from A2
-similar to B1, the other values are zero.
+Since there are no sequences from repertoire A1 similar to B1 or from
+A2 similar to B1, the other values are zero.
 
 
 ## Implementation
@@ -266,25 +282,31 @@ release.
 As a preliminary performance test, Cohort 2 ("Keck") of
 [the dataset](https://s3-us-west-2.amazonaws.com/publishedproject-supplements/emerson-2017-natgen/emerson-2017-natgen.zip)
 by Emerson et al. was compared to itself. It contains 120 repertoires
-with a total of 24 544 336 sequences. The test was performed with
-version 0.0.3 of the tool. The timing results are shown below.
+with a total of 24 205 557 extracted sequences. The test was performed
+with CompAIRR version 0.0.3. The timing results are shown below.
 
 Distance | Indels | Threads | Time (s) | Time (mm:ss)
 -------: | :----: | ------: | -------: | -----------:
-0 | no  | 1 |   72 |  1.12
-0 | no  | 4 |   68 |  1.08
-1 | no  | 1 |  159 |  2.39
-1 | no  | 4 |   97 |  1.37
-1 | yes | 1 |  236 |  3.56
-1 | yes | 4 |  123 |  2.03
-2 | no  | 4 | 2871 | 48.51
+       0 |   no   |       1 |       72 |         1.12
+       0 |   no   |       4 |       68 |         1.08
+       1 |   no   |       1 |      159 |         2.39
+       1 |   no   |       4 |       97 |         1.37
+       1 |   yes  |       1 |      236 |         3.56
+       1 |   yes  |       4 |      123 |         2.03
+       2 |   no   |       4 |     2871 |        48.51
 
-When the distance is zero almost all of the time was used to read files.
+When the distance is zero almost all of the time was used to read
+files.
 
 Memory usage was 3.4GB, corresponding to an average of about 70 bytes
-per sequence. Times are wall time measured by `/usr/bin/time`.
+per sequence.
 
-The analysis was performed on a Mac Mini M1.
+Since this is a comparison of a repertoire set to itself, the dataset
+is only read once, and the memory needed is also reduced as compared
+to a situation were two different repertoire sets were compared.
+
+Times are wall time measured by `/usr/bin/time`. The analysis was
+performed on a Mac Mini M1.
 
 
 ## Development team
@@ -292,9 +314,9 @@ The analysis was performed on a Mac Mini M1.
 The code has been developed by Torbjørn Rognes based on code from
 Swarm where Frédéric Mahé and Lucas Czeck made important
 contributions. Geir Kjetil Sandve had the idea of developing a tool
-for rapid repertoire comparison. Lonneke Scheffer has tested and
-benchmarked the tool. Milena Pavlovic has also contributed to the
-project.
+for rapid repertoire set comparison. Lonneke Scheffer has tested and
+benchmarked the tool, and suggested new features. Milena Pavlovic has
+also contributed to the project.
 
 
 ## Citing CompAIRR
