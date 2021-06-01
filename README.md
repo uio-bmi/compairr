@@ -148,7 +148,7 @@ Input/output options:
 
 Let's use two simple input files. The first is `seta.tsv`:
 
-```
+```tsv
 junction_aa	duplicate_count	v_call	j_call	repertoire_id
 CASSTSHEQYF	1	TCRBV07-06	TCRBJ02-01	A1
 CASSLRVGGYGYTF	3	TCRBV07-09	TCRBJ01-02	A2
@@ -156,7 +156,7 @@ CASSLRVGGYGYTF	3	TCRBV07-09	TCRBJ01-02	A2
 
 The second is `setb.tsv`:
 
-```
+```tsv
 junction_aa	duplicate_count	v_call	j_call	repertoire_id
 CASSLRVGGYGYTF	5	TCRBV07-09	TCRBJ01-02	B1
 CASSLRVGGFGYTF	10	TCRBV07-09	TCRBJ01-02	B1
@@ -170,7 +170,7 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 0.1.0 - Immune repertoire analysis
+CompAIRR 0.2.0 - Immune repertoire analysis
 https://github.com/uio-bmi/compairr
 
 Command:           Overlap
@@ -234,7 +234,7 @@ them.
 
 Here is the result in the `output.tsv` file:
 
-```
+```tsv
 #	B1	B2
 A1	0	7
 A2	45	0
@@ -256,6 +256,9 @@ column on the third line.
 Since there are no sequences from repertoire A1 similar to B1 or from
 A2 similar to B1, the other values are zero.
 
+This small dataset is included in the test folder and the tool can
+automatically be tested by running `make test`.
+
 
 ## Implementation
 
@@ -272,8 +275,10 @@ with 1 or 2 substitutions or indels, the hashes of all these
 
 ## Binaries
 
-The code should compile easily by running `make` in the `src`
-directory. Binaries for Linux and macOS are distributed with each
+The code is C++11 standard compliant and should compile easily using a
+modern C++ compiler. Run `make clean`, `make`, `make test` or `make
+install` in the main folder to clean, build, test or install the
+tool. Binaries for Linux and macOS are also distributed with each
 release.
 
 
@@ -283,30 +288,30 @@ As a preliminary performance test, Cohort 2 ("Keck") of
 [the dataset](https://s3-us-west-2.amazonaws.com/publishedproject-supplements/emerson-2017-natgen/emerson-2017-natgen.zip)
 by Emerson et al. was compared to itself. It contains 120 repertoires
 with a total of 24 205 557 extracted sequences. The test was performed
-with CompAIRR version 0.0.3. The timing results are shown below.
+with CompAIRR version 0.2.0. The timing results are shown below.
 
 Distance | Indels | Threads | Time (s) | Time (mm:ss)
 -------: | :----: | ------: | -------: | -----------:
-0 | no | 1 | 72 | 1.12
-0 | no | 4 | 68 | 1.08
-1 | no | 1 | 159 | 2.39
-1 | no | 4 | 97 | 1.37
-1 | yes | 1 | 236 | 3.56
-1 | yes | 4 | 123 | 2.03
-2 | no | 4 | 2871 | 48.51
+0 | no | 1 | 37 | 0:37
+0 | no | 4 | 32 | 0:32
+1 | no | 1 | 244 | 4:04
+1 | no | 4 | 89 | 1:29
+1 | yes | 1 | 402 | 6:42
+1 | yes | 4 | 133 | 2:13
+2 | no | 4 | 3437 | 57:17
 
 When the distance is zero almost all of the time was used to read
 files.
 
-Memory usage was 3.4GB, corresponding to an average of about 70 bytes
+Memory usage was 2.5GB, corresponding to an average of about 100 bytes
 per sequence.
 
 Since this is a comparison of a repertoire set to itself, the dataset
 is only read once, and the memory needed is also reduced as compared
 to a situation were two different repertoire sets were compared.
 
-Times are wall time measured by `/usr/bin/time`. The analysis was
-performed on a Mac Mini M1.
+Wall time and memory usage was measured by `/usr/bin/time`. The
+analysis was performed on a Mac Mini M1.
 
 
 ## Development team

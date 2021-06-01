@@ -82,8 +82,6 @@ all : $(PROG)
 
 compairr : $(OBJS) $(DEPS)
 	$(CXX) $(LINKFLAGS) -o $@ $(OBJS) $(LIBS)
-	mkdir -p ../bin
-	cp -a compairr ../bin
 
 clean :
 	rm -rf compairr *.o *~ gmon.out *.gcno *.gcda *.gcov
