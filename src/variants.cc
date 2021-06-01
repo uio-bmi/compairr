@@ -79,12 +79,46 @@ uint64_t max_variants(uint64_t longest)
     deletions:     longest
     substitutions: (ab_size - 1) * longest
     insertions:    (ab_size - 1) * (longest + 1) + 1
+
+    d=2
+    substitutions: (ab_size - 1) * (ab_size - 1) * longest * (longest - 1) / 2
   */
 
-  uint64_t maxvar = 1; // identical non-variant
+  uint64_t maxvar = 0;
 
-  for (int i = 0; i < opt_differences; i++)
-    maxvar *= (2 * (longest + i) + 1) * alphabet_size - (longest + i);
+  // d = 0
+  // identical non-variant
+  maxvar += 1;
+
+  if (opt_differences > 0)
+    {
+      // d = 1
+      // substitutions
+      maxvar += longest * (alphabet_size - 1);
+
+      if (opt_indels)
+        {
+          // deletions
+          maxvar += longest;
+
+          // insertions
+          maxvar += (longest + 1) * (alphabet_size - 1) + 1;
+        }
+    }
+
+  if (opt_differences > 1)
+    {
+      // d = 2
+      // substitutions
+      maxvar += longest * (longest - 1) / 2 *
+        (alphabet_size - 1) * (alphabet_size - 1);
+
+      if (opt_indels)
+        {
+          // deletions & insertions
+          fatal("Indels not supported for d=2");
+        }
+    }
 
   return maxvar;
 }
