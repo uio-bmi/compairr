@@ -119,7 +119,7 @@ ignored.
 ## Command line options
 
 ```
-CompAIRR 0.1.0 - Compare Adaptive Immune Receptor Repertoires
+CompAIRR 0.2.0 - Compare Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
