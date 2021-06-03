@@ -5,6 +5,21 @@ adaptive immune receptor repertoires, or cluster the sequences in one
 repertoire.
 
 
+## Installation
+
+The code is C++11 standard compliant and should compile easily using a
+modern C++ compiler (e.g. GNU GCC or LLVM Clang). Run `make clean`,
+`make`, `make test` or `make install` in the main folder to clean,
+build, test or install the tool. It is no dependencies except for the
+C standard library and the C++ standard libraries.
+
+Binaries for Linux (x86_64) and macOS (x86_64 and ARM64) are also
+distributed with each
+[release](https://github.com/uio-bmi/compairr/releases/latest).
+
+A `Dockerfile` is included if you want to make a Docker image.
+
+
 ## General options
 
 Use the `-h` or `--help` option to show some help information.
@@ -273,15 +288,6 @@ with 1 or 2 substitutions or indels, the hashes of all these
 'microvariants' are generated and looked up.
 
 
-## Binaries
-
-The code is C++11 standard compliant and should compile easily using a
-modern C++ compiler. Run `make clean`, `make`, `make test` or `make
-install` in the main folder to clean, build, test or install the
-tool. Binaries for Linux and macOS are also distributed with each
-release.
-
-
 ## Performance
 
 As a preliminary performance test, Cohort 2 ("Keck") of
@@ -339,14 +345,14 @@ immune receptor repertoires allowing non-exact sequence matching.**
 ## Support
 
 We will prioritize fixing important bugs. We will also try to answer
-questions and implement suggested enhancements as time permits. As we
-have no dedicated funding for this project we cannot make any
-guarantees on the level of support.
+questions, improve documentation and implement suggested enhancements
+as time permits. As we have no dedicated funding for this project we
+cannot make any guarantees on the level of support.
 
 To report a potential bug, suggest enhancements or ask questions,
 please use one of the following means:
 
-* [Submit an issue on GitHub](https://github.com/uio-bmi/compairr/issues)
+* [Submit an issue on GitHub](https://github.com/uio-bmi/compairr/issues) (preferred)
 
 * Send an email to [`torognes@ifi.uio.no`](mailto:torognes@ifi.uio.no)
 

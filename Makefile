@@ -1,6 +1,8 @@
-# Makefile
+# Makefile for CompAIRR
 
-PREFIX=/usr/local
+ifndef PREFIX
+	PREFIX=/usr/local
+endif
 
 all : compairr
 
@@ -11,7 +13,7 @@ test: compairr
 	make -C test
 
 install: compairr test
-	/usr/bin/install -c src/compairr $(PREFIX)/bin
+	/usr/bin/install -c src/compairr $(PREFIX)/bin/compairr
 
 clean:
 	make -C src clean
