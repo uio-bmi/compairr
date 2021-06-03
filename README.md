@@ -134,7 +134,7 @@ ignored.
 ## Command line options
 
 ```
-CompAIRR 0.2.0 - Compare Adaptive Immune Receptor Repertoires
+CompAIRR 1.0.0 - Compare Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
@@ -185,7 +185,7 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 0.2.0 - Immune repertoire analysis
+CompAIRR 1.0.0 - Immune repertoire analysis
 https://github.com/uio-bmi/compairr
 
 Command:           Overlap
@@ -294,7 +294,7 @@ As a preliminary performance test, Cohort 2 ("Keck") of
 [the dataset](https://s3-us-west-2.amazonaws.com/publishedproject-supplements/emerson-2017-natgen/emerson-2017-natgen.zip)
 by Emerson et al. was compared to itself. It contains 120 repertoires
 with a total of 24 205 557 extracted sequences. The test was performed
-with CompAIRR version 0.2.0. The timing results are shown below.
+with CompAIRR version 1.0.0. The timing results are shown below.
 
 Distance | Indels | Threads | Time (s) | Time (mm:ss)
 -------: | :----: | ------: | -------: | -----------:
@@ -314,7 +314,7 @@ per sequence.
 
 Since this is a comparison of a repertoire set to itself, the dataset
 is only read once, and the memory needed is also reduced as compared
-to a situation were two different repertoire sets were compared.
+to a situation were two different repertoire sets are compared.
 
 Wall time and memory usage was measured by `/usr/bin/time`. The
 analysis was performed on a Mac Mini M1.
@@ -326,8 +326,8 @@ The code has been developed by Torbjørn Rognes based on code from
 Swarm where Frédéric Mahé and Lucas Czeck made important
 contributions. Geir Kjetil Sandve had the idea of developing a tool
 for rapid repertoire set comparison. Lonneke Scheffer has tested and
-benchmarked the tool, and suggested new features. Milena Pavlovic has
-also contributed to the project.
+benchmarked the tool, and suggested new features. Milena Pavlovic and
+Victor Greiff have also contributed to the project.
 
 
 ## Citing CompAIRR
@@ -336,10 +336,9 @@ We are preparing a manuscript about CompAIRR, but it is not yet
 available. For the time being, please cite the following if you use
 CompAIRR in any published work:
 
-* Rognes T, Scheffer L, Sandve GK (2021)
-**CompAIRR: Efficient computation of similarities between adaptive
-immune receptor repertoires allowing non-exact sequence matching.**
-(In prep.)
+* Rognes T, Scheffer L, Greiff V, Sandve GK (2021)
+**CompAIRR: Efficient computation of adaptive immune receptor repertoire-similarity allowing non-exact sequence matching.**
+(in prep.)
 
 
 ## Support

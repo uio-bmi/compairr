@@ -23,8 +23,7 @@ COMMON = -g -std=c++11
 EXTRAOBJ =
 LINKOPT =
 LIBS = -lpthread
-WARNINGS = -Wall -Wextra \
-#-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic
+WARNINGS = -Wall -Wextra
 
 # Run "make RELEASE=1" to compile for release
 ifdef RELEASE
@@ -84,7 +83,7 @@ compairr : $(OBJS) $(DEPS)
 	$(CXX) $(LINKFLAGS) -o $@ $(OBJS) $(LIBS)
 
 clean :
-	rm -rf compairr *.o *~ gmon.out *.gcno *.gcda *.gcov
+	rm -f compairr *.o *~ gmon.out *.gcno *.gcda *.gcov
 
 .o : .cc $(DEPS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
