@@ -10,8 +10,8 @@ repertoire.
 The code is C++11 standard compliant and should compile easily using a
 modern C++ compiler (e.g. GNU GCC or LLVM Clang). Run `make clean`,
 `make`, `make test` or `make install` in the main folder to clean,
-build, test or install the tool. It is no dependencies except for the
-C standard library and the C++ standard libraries.
+build, test or install the tool. There are no dependencies except for the
+C and C++ standard libraries.
 
 Binaries for Linux (x86_64) and macOS (x86_64 and ARM64) are also
 distributed with each
