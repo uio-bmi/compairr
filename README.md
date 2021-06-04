@@ -300,11 +300,11 @@ Distance | Indels | Threads | Time (s) | Time (mm:ss)
 -------: | :----: | ------: | -------: | -----------:
 0 | no | 1 | 37 | 0:37
 0 | no | 4 | 32 | 0:32
-1 | no | 1 | 244 | 4:04
-1 | no | 4 | 89 | 1:29
-1 | yes | 1 | 402 | 6:42
-1 | yes | 4 | 133 | 2:13
-2 | no | 4 | 3437 | 57:17
+1 | no | 1 | 245 | 4:05
+1 | no | 4 | 90 | 1:30
+1 | yes | 1 | 412 | 6:52
+1 | yes | 4 | 134 | 2:14
+2 | no | 4 | 3615 | 60:15
 
 When the distance is zero almost all of the time was used to read
 files.
