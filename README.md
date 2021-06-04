@@ -148,7 +148,7 @@ Commands:
 General options:
  -d, --differences INTEGER   number (0-2) of differences accepted (0)
  -i, --indels                allow insertions or deletions
- -f, --ignore-frequency      ignore duplicate count information
+ -f, --ignore-counts         ignore duplicate count information
  -g, --ignore-genes          ignore V and J gene information
  -t, --threads INTEGER       number of threads to use (1)
 
