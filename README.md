@@ -17,7 +17,12 @@ Binaries for Linux (x86_64) and macOS (x86_64 and ARM64) are also
 distributed with each
 [release](https://github.com/uio-bmi/compairr/releases/latest).
 
-A `Dockerfile` is included if you want to make a Docker image.
+A `Dockerfile` is included if you want to make a Docker image.  A
+docker image may be built with the following command:
+
+```sh
+docker build -t compairr .
+```
 
 
 ## General options
@@ -336,9 +341,7 @@ We are preparing a manuscript about CompAIRR, but it is not yet
 available. For the time being, please cite the following if you use
 CompAIRR in any published work:
 
-* Rognes T, Scheffer L, Greiff V, Sandve GK (2021)
-**CompAIRR: Efficient computation of adaptive immune receptor repertoire-similarity allowing non-exact sequence matching.**
-(in prep.)
+* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: Efficient computation of adaptive immune receptor repertoire-similarity allowing non-exact sequence matching.** (in prep.)
 
 
 ## Support
@@ -361,7 +364,4 @@ If you would like to contribute with code you are most welcome to
 
 ## References
 
-* Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017)
-**Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.**
-*Nature Genetics*, 49 (5): 659-665.
-doi:[10.1038/ng.3822](https://doi.org/10.1038/ng.3822)
+* Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017) **Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.** *Nature Genetics*, 49 (5): 659-665. doi:[10.1038/ng.3822](https://doi.org/10.1038/ng.3822)

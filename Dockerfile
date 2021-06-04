@@ -1,6 +1,8 @@
-FROM alpine:3.13
+FROM alpine:latest
 WORKDIR /opt/compairr
-COPY . .
+COPY Makefile .
+COPY src ./src
+COPY test ./test
 RUN apk add --no-cache libstdc++ make g++ && \
     make clean && make && make test && make install && make clean && \
     apk del make g++
