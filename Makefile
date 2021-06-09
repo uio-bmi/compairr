@@ -13,6 +13,7 @@ test: compairr
 	make -C test
 
 install: compairr test
+	/usr/bin/install -d $(PREFIX)/bin
 	/usr/bin/install -c src/compairr $(PREFIX)/bin/compairr
 
 clean:
