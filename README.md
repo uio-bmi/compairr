@@ -196,6 +196,7 @@ Here is the output to the console:
 CompAIRR 1.0.2 - Compare Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
+Start time:        Thu Jun 10 18:25:59 CEST 2021
 Command:           Overlap
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
@@ -209,15 +210,15 @@ Threads: (t)       1
 
 Immune receptor repertoire set 1
 
-Reading sequences: 100%
+Reading sequences: 100% (0s)
 Sequences:         2
 Residues:          25
 Shortest:          11
 Longest:           14
 Average length:    12.5
 Repertoires:       2
-Indexing:          100%
-Sorting:           100%
+Indexing:          100% (0s)
+Sorting:           100% (0s)
 
 Repertoires:
   # Sequences Count Repertoire ID
@@ -227,15 +228,15 @@ Sum         2     4
 
 Immune receptor repertoire set 2
 
-Reading sequences: 100%
+Reading sequences: 100% (0s)
 Sequences:         3
 Residues:          39
 Shortest:          11
 Longest:           14
 Average length:    13.0
 Repertoires:       2
-Indexing:          100%
-Sorting:           100%
+Indexing:          100% (0s)
+Sorting:           100% (0s)
 
 Repertoires:
   # Sequences Count Repertoire ID
@@ -245,11 +246,13 @@ Sum         3    22
 
 Unique V genes:    2
 Unique J genes:    2
-Computing hashes:  100%
-Computing hashes:  100%
-Hashing sequences: 100%
-Analysing:         100%
-Writing results:   100%
+Computing hashes:  100% (0s)
+Computing hashes:  100% (0s)
+Hashing sequences: 100% (0s)
+Analysing:         100% (0s)
+Writing results:   100% (0s)
+
+End time:          Thu Jun 10 18:25:59 CEST 2021
 ```
 
 The program gives some statistics on the input files after reading

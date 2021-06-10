@@ -27,6 +27,7 @@ static uint64_t progress_size;
 static uint64_t progress_chunk;
 static const uint64_t progress_granularity = 200;
 const size_t memalignment = 16;
+static std::chrono::time_point<std::chrono::steady_clock> time_point_start;
 
 void progress_init(const char * prompt, uint64_t size)
 {
@@ -40,6 +41,7 @@ void progress_init(const char * prompt, uint64_t size)
   else
     fprintf(logfile, "%s %.0f%%", prompt, 0.0);
   fflush(logfile);
+  time_point_start = std::chrono::steady_clock::now();
 }
 
 void progress_update(uint64_t progress)
@@ -56,10 +58,14 @@ void progress_update(uint64_t progress)
 
 void progress_done()
 {
+  auto time_point_now = std::chrono::steady_clock::now();
+  unsigned long time_diff =
+    (time_point_now - time_point_start) / std::chrono::seconds(1);
   if (opt_log)
-    fprintf(logfile, " %.0f%%\n", 100.0);
+    fprintf(logfile, " %.0f%% (%lus)\n", 100.0, time_diff);
   else
-    fprintf(logfile, "  \r%s %.0f%%\n", progress_prompt, 100.0);
+    fprintf(logfile, "  \r%s %.0f%% (%lus)\n", progress_prompt, 100.0,
+            time_diff);
   fflush(logfile);
 }
 

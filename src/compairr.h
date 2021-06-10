@@ -52,6 +52,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <chrono>
+
 #ifdef __APPLE__
 #include <sys/resource.h>
 #include <sys/sysctl.h>
@@ -134,7 +136,6 @@ extern FILE * logfile;
 /* header files */
 
 #include "util.h"
-
 #include "arch.h"
 #include "bloompat.h"
 #include "cluster.h"

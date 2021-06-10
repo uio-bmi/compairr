@@ -89,6 +89,19 @@ int64_t args_long(char * str, const char * option)
   return temp;
 }
 
+void show_time(const char * prompt)
+{
+  const int time_string_max = 100;
+  char time_string[time_string_max];
+  const time_t clock = time(nullptr);
+  const struct tm * timeptr = localtime(& clock);
+  size_t time_string_len = strftime(time_string,
+                                    time_string_max,
+                                    "%+",
+                                    timeptr);
+  fprintf(logfile, "%s%s\n", prompt, time_string_len > 0 ? time_string : "?");
+}
+
 void args_show()
 {
   fprintf(logfile, "Command:           %s\n", opt_cluster ? "Cluster" : "Overlap");
@@ -386,6 +399,8 @@ int main(int argc, char** argv)
 
   show_header();
 
+  show_time("Start time:        ");
+
   args_show();
 
   fprintf(logfile, "\n");
@@ -394,6 +409,8 @@ int main(int argc, char** argv)
     overlap(input1_filename, input2_filename);
   else
     cluster(input1_filename);
+
+  show_time("End time:          ");
 
   close_files();
 }
