@@ -97,7 +97,7 @@ void show_time(const char * prompt)
   const struct tm * timeptr = localtime(& clock);
   size_t time_string_len = strftime(time_string,
                                     time_string_max,
-                                    "%+",
+                                    "%a %b %d %T %Z %Y",
                                     timeptr);
   fprintf(logfile, "%s%s\n", prompt, time_string_len > 0 ? time_string : "?");
 }
