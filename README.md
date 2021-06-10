@@ -27,6 +27,9 @@ docker build -t compairr .
 Ready-made Docker images for CompAIRR can be found on the
 [Docker Hub](https://hub.docker.com/r/torognes/compairr).
 
+CompAIRR can be installed using homebrew with
+`brew install torognes/bioinf/compairr` on macOS.
+
 
 ## General options
 
