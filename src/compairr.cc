@@ -54,6 +54,7 @@ bool opt_ignore_genes;
 bool opt_indels;
 bool opt_matrix;
 bool opt_version;
+char * opt_pairs;
 char * opt_log;
 char * opt_output;
 int64_t opt_differences;
@@ -63,8 +64,7 @@ int64_t opt_threads;
 
 FILE * outfile = nullptr;
 FILE * logfile = nullptr;
-FILE * fp_seeds = nullptr;
-FILE * network_file = nullptr;
+FILE * pairsfile = nullptr;
 
 static char dash[] = "-";
 static char * DASH_FILENAME = dash;
@@ -104,7 +104,7 @@ void show_time(const char * prompt)
 
 void args_show()
 {
-  fprintf(logfile, "Command:           %s\n", opt_cluster ? "Cluster" : "Overlap");
+  fprintf(logfile, "Command (m/c):     %s\n", opt_cluster ? "Cluster" : "Overlap");
   fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
   if (opt_matrix)
     fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename ? input2_filename : "(same as set 1)");
@@ -114,9 +114,13 @@ void args_show()
           opt_ignore_counts ? "Yes" : "No");
   fprintf(logfile, "Ignore genes (g):  %s\n",
           opt_ignore_genes ? "Yes" : "No");
+  fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
+  if (opt_matrix)
+    fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
   fprintf(logfile, "Output file (o):   %s\n", opt_output);
-  fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
-  fprintf(logfile, "Threads: (t)       %" PRId64 "\n", opt_threads);
+  if (opt_matrix)
+    fprintf(logfile, "Pairs file (p):    %s\n", opt_pairs ? opt_pairs : "(none)");
+  fprintf(logfile, "Log file (l):      %s\n", opt_log ? opt_log : "(stderr)");
 }
 
 void args_usage()
@@ -138,6 +142,7 @@ void args_usage()
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output overlap results in column format\n");
+  fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none)\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout)\n");
   fprintf(stderr, "\n");
@@ -157,7 +162,7 @@ void args_init(int argc, char **argv)
   progname = argv[0];
   input1_filename = 0;
   input2_filename = 0;
-
+  opt_pairs = 0;
   opt_alternative = 0;
   opt_differences = 0;
   opt_ignore_counts = 0;
@@ -171,9 +176,9 @@ void args_init(int argc, char **argv)
 
   opterr = 1;
 
-  char short_options[] = "acd:fghil:mo:t:v";
+  char short_options[] = "acd:fghil:mo:p:t:v";
 
-  /* unused short option letters: bejknpqrsuwxyz */
+  /* unused short option letters: bejknqrsuwxyz */
 
   static struct option long_options[] =
   {
@@ -189,6 +194,7 @@ void args_init(int argc, char **argv)
     {"output",           required_argument, nullptr, 'o' },
     {"threads",          required_argument, nullptr, 't' },
     {"version",          no_argument,       nullptr, 'v' },
+    {"pairs",            required_argument, nullptr, 'p' },
     {nullptr,            0,                 nullptr, 0   }
   };
 
@@ -281,6 +287,11 @@ void args_init(int argc, char **argv)
         opt_output = optarg;
         break;
 
+      case 'p':
+        /* pairs-file */
+        opt_pairs = optarg;
+        break;
+
       case 't':
         /* threads */
         opt_threads = args_long(optarg, "-t or --threads");
@@ -350,6 +361,14 @@ void args_init(int argc, char **argv)
 
   if (opt_indels && (opt_differences != 1))
     fatal("Indels are only allowed when d=1");
+
+  if (opt_cluster)
+    {
+      if (opt_pairs)
+        fatal("Option -p or --pairs is not allowed with -c or --cluster");
+      if (opt_alternative)
+        fatal("Option -a or --alternative is not allowed with -c or --cluster");
+    }
 }
 
 void open_files()
@@ -367,10 +386,19 @@ void open_files()
   if (! outfile)
     fatal("Unable to open output file for writing.");
 
+  if (opt_pairs)
+    {
+      pairsfile = fopen_output(opt_pairs);
+      if (! pairsfile)
+        fatal("Unable to open pairs file for writing.");
+    }
 }
 
 void close_files()
 {
+  if (pairsfile)
+    fclose(pairsfile);
+
   if (outfile)
     fclose(outfile);
 

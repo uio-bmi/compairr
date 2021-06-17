@@ -131,6 +131,14 @@ void xfree(void * ptr)
     fatal("Trying to free a null pointer");
 }
 
+char * xstrdup(const char * s)
+{
+  char * t = strdup(s);
+  if (t == nullptr)
+    fatal("Out of memory");
+  return t;
+}
+
 FILE * fopen_input(const char * filename)
 {
   /* open the input stream given by filename, but use stdin if name is - */

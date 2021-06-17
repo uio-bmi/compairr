@@ -39,11 +39,19 @@ static uint64_t * set2_repertoire_size = nullptr;
 static uint64_t * set2_repertoire_count = nullptr;
 static unsigned int * set2_lookup_repertoire = nullptr;
 
+static pthread_mutex_t pairs_mutex;
 static pthread_mutex_t network_mutex;
 static uint64_t network_progress = 0;
 static struct bloom_s * bloom_a = nullptr; // Bloom filter for sequences
 static uint64_t * repertoire_matrix = nullptr;
 static hashtable_s * hashtable = nullptr;
+
+static uint64_t all_matches = 0;
+
+typedef struct pair_s
+{
+  uint64_t seq[2];
+} pair_t;
 
 //#define AVOID_DUPLICATES 1
 
@@ -81,10 +89,11 @@ int set2_compare_by_repertoire_name(const void * a, const void * b)
 void find_variant_matches(uint64_t seed,
                           var_s * var,
                           uint64_t * repertoire_matrix,
-                          struct bloom_s * bloom_d)
+                          struct bloom_s * bloom_d,
+                          uint64_t * pairs_alloc,
+                          uint64_t * pairs_count,
+                          struct pair_s * * pairs_list)
 {
-  /* seed in set 1, amp in set 2 */
-
   /* compute hash and corresponding hash table index */
 
   uint64_t j = hash_getindex(hashtable, var->hash);
@@ -127,6 +136,23 @@ void find_variant_matches(uint64_t seed,
                   uint64_t g = db_get_count(d2, hit);
                   repertoire_matrix[set2_repertoires * i + j] += f * g;
 
+                  all_matches++;
+
+                  if (opt_pairs)
+                    {
+                      /* allocate more memory if needed */
+                      if (*pairs_count >= *pairs_alloc)
+                        {
+                          * pairs_alloc = 2 * (* pairs_alloc);
+                          * pairs_list = static_cast<struct pair_s *>
+                            (xrealloc(* pairs_list,
+                                      (*pairs_alloc) * sizeof(struct pair_s)));
+                        }
+
+                      struct pair_s p = { seed, hit };
+                      (*pairs_list)[(*pairs_count)++] = p;
+                    }
+
                   if (bloom_d)
                     bloom_set(bloom_d, var->hash);
                 }
@@ -138,7 +164,10 @@ void find_variant_matches(uint64_t seed,
 
 void process_variants(uint64_t seed,
                       var_s * variant_list,
-                      uint64_t * repertoire_matrix)
+                      uint64_t * repertoire_matrix,
+                      uint64_t * pairs_alloc,
+                      uint64_t * pairs_count,
+                      struct pair_s * * pairs_list)
 {
   unsigned int variant_count = 0;
   unsigned char * sequence = (unsigned char *) db_getsequence(d1, seed);
@@ -156,7 +185,13 @@ void process_variants(uint64_t seed,
       var_s * var = variant_list + i;
       if (bloom_get(bloom_a, var->hash))
         {
-          find_variant_matches(seed, var, repertoire_matrix, nullptr);
+          find_variant_matches(seed,
+                               var,
+                               repertoire_matrix,
+                               nullptr,
+                               pairs_alloc,
+                               pairs_count,
+                               pairs_list);
         }
     }
 }
@@ -164,7 +199,10 @@ void process_variants(uint64_t seed,
 void process_variants_avoid_duplicates(uint64_t seed,
                                        var_s * variant_list,
                                        uint64_t * repertoire_matrix,
-                                       struct bloom_s * bloom_d)
+                                       struct bloom_s * bloom_d,
+                                       uint64_t * pairs_alloc,
+                                       uint64_t * pairs_count,
+                                       struct pair_s * * pairs_list)
 {
   unsigned int variant_count = 0;
   unsigned char * sequence = (unsigned char *) db_getsequence(d1, seed);
@@ -237,7 +275,13 @@ void process_variants_avoid_duplicates(uint64_t seed,
             }
 
           if (!dup)
-            find_variant_matches(seed, var, repertoire_matrix, bloom_d);
+            find_variant_matches(seed,
+                                 var,
+                                 repertoire_matrix,
+                                 bloom_d,
+                                 pairs_alloc,
+                                 pairs_count,
+                                 pairs_list);
         }
     }
 }
@@ -247,6 +291,14 @@ void sim_thread(int64_t t)
   (void) t;
 
   uint64_t maxvar = max_variants(set1_longestsequence);
+
+  uint64_t pairs_alloc = 4 * CHUNK;
+  uint64_t pairs_count = 0;
+
+  struct pair_s * pairs_list = nullptr;
+  if (opt_pairs)
+    pairs_list = static_cast<struct pair_s *>
+      (xmalloc(pairs_alloc * sizeof(struct pair_s)));
 
   struct var_s * variant_list = static_cast<struct var_s *>
     (xmalloc(maxvar * sizeof(struct var_s)));
@@ -284,13 +336,55 @@ void sim_thread(int64_t t)
           uint64_t seed = firstseed + z;
 
 #ifdef AVOID_DUPLICATES
-          process_variants_avoid_duplicates(seed, variant_list, repertoire_matrix_local, bloom_d);
+          process_variants_avoid_duplicates(seed,
+                                            variant_list,
+                                            repertoire_matrix_local,
+                                            bloom_d,
+                                            & pairs_alloc,
+                                            & pairs_count,
+                                            & pairs_list);
 #else
-          process_variants(seed, variant_list, repertoire_matrix_local);
+          process_variants(seed,
+                           variant_list,
+                           repertoire_matrix_local,
+                           & pairs_alloc,
+                           & pairs_count,
+                           & pairs_list);
 #endif
         }
 
-      /* lock mutex and update global repertoire_matrix */
+      if (opt_pairs)
+        {
+          if (opt_threads > 1)
+            pthread_mutex_lock(&pairs_mutex);
+          for (uint64_t i = 0; i < pairs_count; i++)
+            {
+              uint64_t a = pairs_list[i].seq[0];
+              uint64_t b = pairs_list[i].seq[1];
+
+              fprintf(pairsfile,
+                      "%s\t%s\t%llu\t%s\t%s\t",
+                      db_get_repertoire_id(d1, db_get_repertoire_id_no(d1, a)),
+                      db_get_sequence_id(d1, a),
+                      db_get_count(d1, a),
+                      db_get_v_gene_name(d1, a),
+                      db_get_j_gene_name(d1, a));
+              db_fprint_sequence(pairsfile, d1, a);
+              fprintf(pairsfile,
+                      "\t%s\t%s\t%llu\t%s\t%s\t",
+                      db_get_repertoire_id(d2, db_get_repertoire_id_no(d2, b)),
+                      db_get_sequence_id(d2, b),
+                      db_get_count(d2, b),
+                      db_get_v_gene_name(d2, b),
+                      db_get_j_gene_name(d2, b));
+              db_fprint_sequence(pairsfile, d2, b);
+              fprintf(pairsfile, "\n");
+            }
+          pairs_count = 0;
+          if (opt_threads > 1)
+            pthread_mutex_unlock(&pairs_mutex);
+        }
+
       pthread_mutex_lock(&network_mutex);
     }
 
@@ -306,11 +400,14 @@ void sim_thread(int64_t t)
 
   xfree(repertoire_matrix_local);
   xfree(variant_list);
+
+  if (opt_pairs)
+    xfree(pairs_list);
 }
 
 void overlap(char * set1_filename, char * set2_filename)
 {
-  /* find overlaps between repertoires of repertoires */
+  /* find overlaps between repertoires */
 
   db_init();
 
@@ -537,7 +634,16 @@ void overlap(char * set1_filename, char * set2_filename)
   /* compare all sequences */
 
   pthread_mutex_init(&network_mutex, nullptr);
+  pthread_mutex_init(&pairs_mutex, nullptr);
   progress_init("Analysing:        ", set1_sequences);
+
+  if (opt_pairs)
+    fprintf(pairsfile,
+            "#repertoire_id_1\tsequence_id_1\t"
+            "duplicate_count_1\tv_call_1\tj_call_1\tjunction_aa_1\t"
+            "repertoire_id_2\tsequence_id_2\t"
+            "duplicate_count_2\tv_call_2\tj_call_2\tjunction_aa_2\n"
+            );
 
   if (opt_threads == 1)
     {
@@ -552,6 +658,7 @@ void overlap(char * set1_filename, char * set2_filename)
     }
 
   progress_done();
+  pthread_mutex_destroy(&pairs_mutex);
   pthread_mutex_destroy(&network_mutex);
 
   /* dump similarity matrix */
@@ -560,6 +667,7 @@ void overlap(char * set1_filename, char * set2_filename)
   progress_init("Writing results:  ", set1_sequences * set2_sequences);
   if (opt_alternative)
     {
+      fprintf(outfile, "#repertoire_id_1\trepertoire_id_2\tmatches\n");
       for (unsigned int i = 0; i < set1_repertoires; i++)
         {
           unsigned int s = set1_lookup_repertoire[i];
@@ -630,4 +738,6 @@ void overlap(char * set1_filename, char * set2_filename)
   db_free(d1);
 
   db_exit();
+
+  fprintf(logfile, "All matches: %llu\n", all_matches);
 }

@@ -26,6 +26,7 @@ int64_t gcd(int64_t a, int64_t b);
 void * xmalloc(size_t size);
 void * xrealloc(void * ptr, size_t size);
 void xfree(void * ptr);
+char * xstrdup(const char * s);
 void progress_init(const char * prompt, uint64_t size);
 void progress_update(uint64_t progress);
 void progress_done();

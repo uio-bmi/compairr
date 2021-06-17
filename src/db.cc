@@ -47,16 +47,18 @@ static signed char map_aa[256] =
   };
 
 const static char * aa_chars = "ACDEFGHIKLMNPQRSTVWY";
+const char * EMPTYSTRING = "";
 
 struct seqinfo_s
 {
   uint64_t hash;
-  char * seq;
-  short seqlen;
-  unsigned int repertoire_id_no;
-  short v_gene_no;
-  short j_gene_no;
   uint64_t count;
+  char * sequence_id;
+  char * seq;
+  unsigned short seqlen;
+  unsigned short repertoire_id_no;
+  unsigned short v_gene_no;
+  unsigned short j_gene_no;
 };
 
 typedef struct seqinfo_s seqinfo_t;
@@ -82,6 +84,13 @@ static uint64_t v_gene_count = 0;
 static char * * j_gene_list = 0;
 static uint64_t j_gene_alloc = 0;
 static uint64_t j_gene_count = 0;
+
+static int col_junction_aa = 0;
+static int col_duplicate_count = 0;
+static int col_v_call = 0;
+static int col_j_call = 0;
+static int col_repertoire_id = 0;
+static int col_sequence_id = 0;
 
 void db_init()
 {
@@ -121,6 +130,7 @@ void db_exit()
 uint64_t list_insert(char * * * list,
                      uint64_t * alloc,
                      uint64_t * count,
+                     uint64_t max,
                      char * item)
 {
   /* linear list */
@@ -132,6 +142,11 @@ uint64_t list_insert(char * * * list,
         return i;
 
   /* expand if necessary */
+  if (c >= max)
+    {
+      fatal("Too many items (V genes, J genes, or repertoire ID's)");
+    }
+
   if (c >= *alloc)
     {
       *alloc += 256;
@@ -176,12 +191,6 @@ struct db * db_create()
   return d;
 }
 
-static int col_junction_aa = 0;
-static int col_duplicate_count = 0;
-static int col_v_call = 0;
-static int col_j_call = 0;
-static int col_repertoire_id = 0;
-
 void parse_airr_tsv_header(char * line)
 {
   char delim[] = "\t";
@@ -190,7 +199,7 @@ void parse_airr_tsv_header(char * line)
 
   int i = 1;
 
-  while ((token = strsep(& string, delim)) != NULL)
+  while ((token = strsep(& string, delim)) != nullptr)
     {
       if (strcmp(token, "junction_aa") == 0)
         {
@@ -211,6 +220,10 @@ void parse_airr_tsv_header(char * line)
       else if (strcmp(token, "repertoire_id") == 0)
         {
           col_repertoire_id = i;
+        }
+      else if (strcmp(token, "sequence_id") == 0)
+        {
+          col_sequence_id = i;
         }
       i++;
     }
@@ -240,11 +253,12 @@ void parse_airr_tsv_header(char * line)
 
 void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 {
-  char * junction_aa = NULL;
-  char * duplicate_count = NULL;
-  char * v_call = NULL;
-  char * j_call = NULL;
-  char * repertoire_id = NULL;
+  char * junction_aa = nullptr;
+  char * duplicate_count = nullptr;
+  char * v_call = nullptr;
+  char * j_call = nullptr;
+  char * repertoire_id = nullptr;
+  char * sequence_id = nullptr;
 
   char delim[] = "\t";
   char * string = line;
@@ -252,7 +266,7 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 
   int i = 1;
 
-  while ((token = strsep(& string, delim)) != NULL)
+  while ((token = strsep(& string, delim)) != nullptr)
     {
       if (i == col_junction_aa)
         {
@@ -274,10 +288,14 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
         {
           repertoire_id = token;
         }
+      else if (i == col_sequence_id)
+        {
+          sequence_id = token;
+        }
       i++;
     }
 
-  /* check that all values are read */
+  /* check that all required values are read */
 
   if (! (junction_aa && duplicate_count && v_call && j_call && repertoire_id))
     {
@@ -291,7 +309,7 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
       exit(1);
     }
 
-  /* check that strings are not empty */
+  /* check that required strings are not empty */
 
   if (! (*junction_aa && *duplicate_count && *v_call && *j_call &&
         *repertoire_id))
@@ -374,17 +392,29 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
   uint64_t v_gene_index = list_insert(& v_gene_list,
                                       & v_gene_alloc,
                                       & v_gene_count,
+                                      USHRT_MAX,
                                       v_call);
 
   uint64_t j_gene_index = list_insert(& j_gene_list,
                                       & j_gene_alloc,
                                       & j_gene_count,
+                                      USHRT_MAX,
                                       j_call);
 
   uint64_t repertoire_id_index = list_insert(& d->repertoire_id_list,
-                                      & d->repertoire_id_alloc,
-                                      & d->repertoire_count,
-                                      repertoire_id);
+                                             & d->repertoire_id_alloc,
+                                             & d->repertoire_count,
+                                             UINT_MAX,
+                                             repertoire_id);
+
+  if (sequence_id && (*sequence_id))
+    {
+      p->sequence_id = xstrdup(sequence_id);
+    }
+  else
+    {
+      p->sequence_id = nullptr;
+    }
 
   p->seqlen = seqlen;
   p->repertoire_id_no = repertoire_id_index;
@@ -652,6 +682,15 @@ uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno)
 char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no)
 {
   return d->repertoire_id_list[repertoire_id_no];
+}
+
+char * db_get_sequence_id(struct db * d, uint64_t seqno)
+{
+  char * sid = d->seqindex[seqno].sequence_id;
+  if (sid)
+    return sid;
+  else
+    return (char *) EMPTYSTRING;
 }
 
 uint64_t db_get_v_gene_count()

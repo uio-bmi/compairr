@@ -61,6 +61,8 @@ uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno);
 
 char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no);
 
+char * db_get_sequence_id(struct db * d, uint64_t seqno);
+
 void db_hash(struct db * d);
 
 uint64_t db_get_v_gene_count();

@@ -101,7 +101,7 @@ static_assert(INT_MAX > 32767, "Your compiler uses very short integers.");
 #define PROG_CMD "compairr"
 #define PROG_NAME "CompAIRR"
 #define PROG_VERSION "1.1.0"
-#define PROG_BRIEF "Compare Adaptive Immune Receptor Repertoires"
+#define PROG_BRIEF "Comparison of Adaptive Immune Receptor Repertoires"
 
 const unsigned int MAX_THREADS = 256;
 
@@ -125,6 +125,7 @@ extern bool opt_ignore_genes;
 extern bool opt_indels;
 extern bool opt_matrix;
 extern bool opt_version;
+extern char * opt_pairs;
 extern char * opt_log;
 extern char * opt_output_file;
 extern int64_t opt_differences;
@@ -132,6 +133,7 @@ extern int64_t opt_threads;
 
 extern FILE * outfile;
 extern FILE * logfile;
+extern FILE * pairsfile;
 
 /* header files */
 

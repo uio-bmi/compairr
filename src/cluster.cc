@@ -353,20 +353,28 @@ void cluster(char * filename)
 
   uint64_t j = 0;
   progress_init("Writing clusters: ", seqcount);
+  fprintf(outfile,
+          "#cluster_no\tcluster_size\trepertoire_id\tsequence_id\t"
+          "duplicate_count\tv_call\tj_call\tjunction_aa\n");
   for(unsigned int i = 0; i < clustercount; i++)
     {
       unsigned int seed = clusterinfo[i].seed;
       unsigned int size = clusterinfo[i].size;
       for(unsigned int a = seed; a != no_cluster; a = iteminfo[a].next)
         {
-          fprintf(outfile, "%u\t%u\t", i + 1, size);
-          db_fprint_sequence(outfile, d, a);
           fprintf(outfile,
-                  "\t%" PRIu64 "\t%s\t%s\t%s\n",
+                  "%u\t%u\t",
+                  i + 1,
+                  size);
+          fprintf(outfile,
+                  "%s\t%s\t%" PRIu64 "\t%s\t%s\t",
+                  db_get_repertoire_id(d, db_get_repertoire_id_no(d, a)),
+                  db_get_sequence_id(d, a),
                   db_get_count(d, a),
                   db_get_v_gene_name(d, a),
-                  db_get_j_gene_name(d, a),
-                  db_get_repertoire_id(d, db_get_repertoire_id_no(d, a)));
+                  db_get_j_gene_name(d, a));
+          db_fprint_sequence(outfile, d, a);
+          fprintf(outfile, "\n");
           j++;
         }
       progress_update(j);
