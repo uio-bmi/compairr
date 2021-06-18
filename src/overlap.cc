@@ -738,6 +738,4 @@ void overlap(char * set1_filename, char * set2_filename)
   db_free(d1);
 
   db_exit();
-
-  fprintf(logfile, "All matches: %llu\n", all_matches);
 }

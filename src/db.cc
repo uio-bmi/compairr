@@ -131,7 +131,7 @@ uint64_t list_insert(char * * * list,
                      uint64_t * alloc,
                      uint64_t * count,
                      uint64_t max,
-                     char * item)
+                     const char * item)
 {
   /* linear list */
 
@@ -228,24 +228,24 @@ void parse_airr_tsv_header(char * line)
       i++;
     }
 
-  if (! col_junction_aa ||
-      ! col_duplicate_count ||
-      ! col_v_call ||
-      ! col_j_call ||
-      ! col_repertoire_id)
+  if (! col_repertoire_id ||
+      ! col_junction_aa ||
+      ! (opt_ignore_counts || col_duplicate_count) ||
+      ! (opt_ignore_genes || col_v_call) ||
+      ! (opt_ignore_genes || col_j_call))
     {
       fprintf(logfile,
         "\nMissing essential column(s) in header of AIRR TSV input file:");
-      if (! col_junction_aa)
-        fprintf(logfile, " junction_aa");
-      if (! col_duplicate_count)
-        fprintf(logfile, " duplicate_count");
-      if (! col_v_call)
-        fprintf(logfile, " v_call");
-      if (! col_j_call)
-        fprintf(logfile, " j_call");
       if (! col_repertoire_id)
         fprintf(logfile, " repertoire_id");
+      if (! (col_duplicate_count || opt_ignore_counts))
+        fprintf(logfile, " duplicate_count");
+      if (! (col_v_call || opt_ignore_genes))
+        fprintf(logfile, " v_call");
+      if (! (col_j_call || opt_ignore_genes))
+        fprintf(logfile, " j_call");
+      if (! col_junction_aa)
+        fprintf(logfile, " junction_aa");
       fprintf(logfile, "\n");
       exit(1);
     }
@@ -295,45 +295,66 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
       i++;
     }
 
-  /* check that all required values are read */
+  /* check that all required values are read and not empty */
 
-  if (! (junction_aa && duplicate_count && v_call && j_call && repertoire_id))
+  if (! (repertoire_id && *repertoire_id))
     {
       fprintf(logfile,
-              "\n\nError: Missing data on line: %" PRIu64 "\n",
+              "\n\nError: missing or empty repertoire_id on line: %" PRIu64 "\n",
               lineno);
-      fprintf(logfile,
-              "junction_aa: %s duplicate_count: %s "
-              "v_call: %s j_call: %s repertoire_id: %s\n",
-              junction_aa, duplicate_count, v_call, j_call, repertoire_id);
       exit(1);
     }
 
-  /* check that required strings are not empty */
-
-  if (! (*junction_aa && *duplicate_count && *v_call && *j_call &&
-        *repertoire_id))
+  if (! (junction_aa && *junction_aa))
     {
-      fprintf(logfile, "\n\nError: Empty string on line: %" PRIu64 "\n",
+      fprintf(logfile,
+              "\n\nError: missing or empty junction_aa on line: %" PRIu64 "\n",
               lineno);
-      fprintf(logfile, "junction_aa: %s duplicate_count: %s "
-              "v_call: %s j_call: %s repertoire_id: %s\n",
-              junction_aa, duplicate_count, v_call, j_call, repertoire_id);
       exit(1);
     }
 
-  /* check the converted duplicate_count */
-
-  long count = 0;
-  char * endptr;
-  count = strtol(duplicate_count, &endptr, 10);
-
-  if ((endptr == duplicate_count) || (endptr == nullptr) || (*endptr) ||
-      (count <= 0))
+  if (! opt_ignore_genes)
     {
-      fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
-              PRIu64 ": %s\n", lineno, duplicate_count);
-      exit(1);
+      if (! (v_call && *v_call))
+        {
+          fprintf(logfile,
+                  "\n\nError: missing or empty v_call on line: %" PRIu64 "\n",
+                  lineno);
+          exit(1);
+        }
+      if (! (j_call && *j_call))
+        {
+          fprintf(logfile,
+                  "\n\nError: missing or empty j_call on line: %" PRIu64 "\n",
+                  lineno);
+          exit(1);
+        }
+    }
+
+  long count = 1;
+
+  if (! opt_ignore_counts)
+    {
+      if (! (duplicate_count && *duplicate_count))
+        {
+          fprintf(logfile,
+                  "\n\nError: missing or empty duplicate_count on line: %"
+                  PRIu64 "\n",
+                  lineno);
+          exit(1);
+        }
+    }
+
+  if (duplicate_count && *duplicate_count)
+    {
+      char * endptr;
+      count = strtol(duplicate_count, &endptr, 10);
+      if ((endptr == nullptr) || (*endptr) || (count < 1))
+        {
+          fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
+                  PRIu64 ": %s\n", lineno, duplicate_count);
+          exit(1);
+        }
     }
 
   /* make room for another sequence */
@@ -393,13 +414,13 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
                                       & v_gene_alloc,
                                       & v_gene_count,
                                       USHRT_MAX,
-                                      v_call);
+                                      v_call ? v_call : "");
 
   uint64_t j_gene_index = list_insert(& j_gene_list,
                                       & j_gene_alloc,
                                       & j_gene_count,
                                       USHRT_MAX,
-                                      j_call);
+                                      j_call ? j_call : "");
 
   uint64_t repertoire_id_index = list_insert(& d->repertoire_id_list,
                                              & d->repertoire_id_alloc,
