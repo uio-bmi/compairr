@@ -363,7 +363,7 @@ void sim_thread(int64_t t)
               uint64_t b = pairs_list[i].seq[1];
 
               fprintf(pairsfile,
-                      "%s\t%s\t%llu\t%s\t%s\t",
+                      "%s\t%s\t%" PRIu64 "\t%s\t%s\t",
                       db_get_repertoire_id(d1, db_get_repertoire_id_no(d1, a)),
                       db_get_sequence_id(d1, a),
                       db_get_count(d1, a),
@@ -371,7 +371,7 @@ void sim_thread(int64_t t)
                       db_get_j_gene_name(d1, a));
               db_fprint_sequence(pairsfile, d1, a);
               fprintf(pairsfile,
-                      "\t%s\t%s\t%llu\t%s\t%s\t",
+                      "\t%s\t%s\t%" PRIu64 "\t%s\t%s\t",
                       db_get_repertoire_id(d2, db_get_repertoire_id_no(d2, b)),
                       db_get_sequence_id(d2, b),
                       db_get_count(d2, b),
