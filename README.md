@@ -165,7 +165,7 @@ ignored.
 ## Command line options
 
 ```
-CompAIRR 1.2.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.2.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
@@ -218,7 +218,7 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 1.2.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.2.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Start time:        Fri Jun 18 13:31:25 CEST 2021
