@@ -86,6 +86,35 @@ int set2_compare_by_repertoire_name(const void * a, const void * b)
   return strcmp(db_get_repertoire_id(d2, *x), db_get_repertoire_id(d2, *y));
 }
 
+inline uint64_t compute_summand(uint64_t a, uint64_t b)
+{
+  switch(opt_summands_int)
+    {
+    case summands_product:
+      return a * b;
+      break;
+
+    case summands_ratio:
+      return a / b;
+      break;
+
+    case summands_min:
+      return MIN(a, b);
+      break;
+
+    case summands_max:
+      return MAX(a, b);
+      break;
+
+    case summands_mean:
+      return (a + b) / 2;
+      break;
+    }
+
+  fatal("Internal error");
+}
+
+
 void find_variant_matches(uint64_t seed,
                           var_s * var,
                           uint64_t * repertoire_matrix,
@@ -134,7 +163,10 @@ void find_variant_matches(uint64_t seed,
                   unsigned int j = db_get_repertoire_id_no(d2, hit);
                   uint64_t f = db_get_count(d1, seed);
                   uint64_t g = db_get_count(d2, hit);
-                  repertoire_matrix[set2_repertoires * i + j] += f * g;
+
+                  uint64_t s = compute_summand(f, g);
+
+                  repertoire_matrix[set2_repertoires * i + j] += s;
 
                   all_matches++;
 

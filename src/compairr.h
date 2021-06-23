@@ -115,6 +115,15 @@ const unsigned int MAX_THREADS = 256;
 
 const int alphabet_size = 20;
 
+enum
+  {
+    summands_product,
+    summands_ratio,
+    summands_min,
+    summands_max,
+    summands_mean
+  };
+
 /* common data */
 
 extern bool opt_alternative;
@@ -125,10 +134,12 @@ extern bool opt_ignore_genes;
 extern bool opt_indels;
 extern bool opt_matrix;
 extern bool opt_version;
-extern char * opt_pairs;
 extern char * opt_log;
 extern char * opt_output_file;
+extern char * opt_pairs;
+extern char * opt_summands_string;
 extern int64_t opt_differences;
+extern int64_t opt_summands_int;
 extern int64_t opt_threads;
 
 extern FILE * outfile;

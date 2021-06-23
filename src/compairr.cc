@@ -54,10 +54,12 @@ bool opt_ignore_genes;
 bool opt_indels;
 bool opt_matrix;
 bool opt_version;
-char * opt_pairs;
 char * opt_log;
 char * opt_output;
+char * opt_pairs;
+char * opt_summands_string;
 int64_t opt_differences;
+int64_t opt_summands_int;
 int64_t opt_threads;
 
 /* Other variables */
@@ -68,6 +70,8 @@ FILE * pairsfile = nullptr;
 
 static char dash[] = "-";
 static char * DASH_FILENAME = dash;
+
+static const char * summand_options[] = { "Product", "Ratio", "Min", "Max", "Mean" };
 
 int64_t args_long(char * str, const char * option);
 void args_show();
@@ -115,11 +119,13 @@ void args_show()
   fprintf(logfile, "Ignore genes (g):  %s\n",
           opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
-  if (opt_matrix)
-    fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
   fprintf(logfile, "Output file (o):   %s\n", opt_output);
   if (opt_matrix)
-    fprintf(logfile, "Pairs file (p):    %s\n", opt_pairs ? opt_pairs : "(none)");
+    {
+      fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
+      fprintf(logfile, "Summands (s):      %s\n", summand_options[opt_summands_int]);
+      fprintf(logfile, "Pairs file (p):    %s\n", opt_pairs ? opt_pairs : "(none)");
+    }
   fprintf(logfile, "Log file (l):      %s\n", opt_log ? opt_log : "(stderr)");
 }
 
@@ -138,6 +144,7 @@ void args_usage()
   fprintf(stderr, " -i, --indels                allow insertions or deletions\n");
   fprintf(stderr, " -f, --ignore-counts         ignore duplicate_count information\n");
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
+  fprintf(stderr, " -s, --summands STRING       sum product (default), ratio, min, max, or mean\n");
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
@@ -160,25 +167,27 @@ void args_init(int argc, char **argv)
   /* Set defaults */
 
   progname = argv[0];
-  input1_filename = 0;
-  input2_filename = 0;
-  opt_pairs = 0;
-  opt_alternative = 0;
+  input1_filename = nullptr;
+  input2_filename = nullptr;
+  opt_pairs = nullptr;
+  opt_alternative = false;
   opt_differences = 0;
-  opt_ignore_counts = 0;
-  opt_ignore_genes = 0;
-  opt_help = 0;
-  opt_indels = 0;
+  opt_ignore_counts = false;
+  opt_ignore_genes = false;
+  opt_help = false;
+  opt_indels = false;
   opt_log = nullptr;
   opt_output = DASH_FILENAME;
   opt_threads = 1;
-  opt_version = 0;
+  opt_version = false;
+  opt_summands_int = 0;
+  opt_summands_string = NULL;
 
   opterr = 1;
 
-  char short_options[] = "acd:fghil:mo:p:t:v";
+  char short_options[] = "acd:fghil:mo:p:s:t:v";
 
-  /* unused short option letters: bejknqrsuwxyz */
+  /* unused short option letters: bejkqruwxyz */
 
   static struct option long_options[] =
   {
@@ -192,9 +201,10 @@ void args_init(int argc, char **argv)
     {"log",              required_argument, nullptr, 'l' },
     {"matrix",           no_argument,       nullptr, 'm' },
     {"output",           required_argument, nullptr, 'o' },
+    {"pairs",            required_argument, nullptr, 'p' },
+    {"summands",         required_argument, nullptr, 's' },
     {"threads",          required_argument, nullptr, 't' },
     {"version",          no_argument,       nullptr, 'v' },
-    {"pairs",            required_argument, nullptr, 'p' },
     {nullptr,            0,                 nullptr, 0   }
   };
 
@@ -239,12 +249,12 @@ void args_init(int argc, char **argv)
       {
       case 'a':
         /* alternative */
-        opt_alternative = 1;
+        opt_alternative = true;
         break;
 
       case 'c':
         /* cluster */
-        opt_cluster = 1;
+        opt_cluster = true;
         break;
 
       case 'd':
@@ -254,22 +264,22 @@ void args_init(int argc, char **argv)
 
       case 'f':
         /* ignore-counts */
-        opt_ignore_counts = 1;
+        opt_ignore_counts = true;
         break;
 
       case 'g':
         /* ignore-genes */
-        opt_ignore_genes = 1;
+        opt_ignore_genes = true;
         break;
 
       case 'h':
         /* help */
-        opt_help = 1;
+        opt_help = true;
         break;
 
       case 'i':
         /* indels */
-        opt_indels = 1;
+        opt_indels = true;
         break;
 
       case 'l':
@@ -279,7 +289,7 @@ void args_init(int argc, char **argv)
 
       case 'm':
         /* matrix */
-        opt_matrix = 1;
+        opt_matrix = true;
         break;
 
       case 'o':
@@ -292,6 +302,11 @@ void args_init(int argc, char **argv)
         opt_pairs = optarg;
         break;
 
+      case 's':
+        /* summands */
+        opt_summands_string = optarg;
+        break;
+
       case 't':
         /* threads */
         opt_threads = args_long(optarg, "-t or --threads");
@@ -299,7 +314,7 @@ void args_init(int argc, char **argv)
 
       case 'v':
         /* version */
-        opt_version = 1;
+        opt_version = true;
         break;
 
       default:
@@ -368,6 +383,21 @@ void args_init(int argc, char **argv)
         fatal("Option -p or --pairs is not allowed with -c or --cluster");
       if (opt_alternative)
         fatal("Option -a or --alternative is not allowed with -c or --cluster");
+    }
+
+  if (opt_summands_string)
+    {
+      opt_summands_int = -1;
+      for(int i = 0; i < 5; i++)
+        if (strcasecmp(opt_summands_string, summand_options[i]) == 0)
+          {
+            opt_summands_int = i;
+            break;
+          }
+      if (opt_summands_int < 0)
+        {
+          fatal("Argument to -s or --summands must be product, ratio, min, max or mean");
+        }
     }
 }
 
