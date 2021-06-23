@@ -88,8 +88,8 @@ of each sequence is taken into account and a matrix is output
 containing a value for each combination of repertoires in the two
 sets. The value is usually the sum of the products of the duplicate
 counts of all pairs of sequences in the two repertoires that match. If
-the option `-f` or `--ignore-frequency` is specified, the duplicate
-count information is ignored and all counts are set to 1. Instead of
+the option `-f` or `--ignore-counts` is specified, the duplicate
+count information is ignored and all counts are treated as 1. Instead of
 summing the product of the counts, the ratio, min, max, or mean may be
 used if specified with the `-s` or `--summand` option.
 
