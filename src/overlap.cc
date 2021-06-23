@@ -88,32 +88,25 @@ int set2_compare_by_repertoire_name(const void * a, const void * b)
 
 inline uint64_t compute_summand(uint64_t a, uint64_t b)
 {
-  switch(opt_summands_int)
-    {
-    case summands_product:
-      return a * b;
-      break;
-
-    case summands_ratio:
-      return a / b;
-      break;
-
-    case summands_min:
-      return MIN(a, b);
-      break;
-
-    case summands_max:
-      return MAX(a, b);
-      break;
-
-    case summands_mean:
-      return (a + b) / 2;
-      break;
-    }
-
-  fatal("Internal error");
+  if (opt_ignore_counts)
+    return 1;
+  else
+    switch(opt_summands_int)
+      {
+      case summands_product:
+        return a * b;
+      case summands_ratio:
+        return a / b;
+      case summands_min:
+        return MIN(a, b);
+      case summands_max:
+        return MAX(a, b);
+      case summands_mean:
+        return (a + b) / 2;
+      default:
+        fatal("Internal error");
+      }
 }
-
 
 void find_variant_matches(uint64_t seed,
                           var_s * var,
@@ -670,13 +663,20 @@ void overlap(char * set1_filename, char * set2_filename)
   progress_init("Analysing:        ", set1_sequences);
 
   if (opt_pairs)
-    fprintf(pairsfile,
-            "#repertoire_id_1\tsequence_id_1\t"
-            "duplicate_count_1\tv_call_1\tj_call_1\tjunction_aa_1\t"
-            "repertoire_id_2\tsequence_id_2\t"
-            "duplicate_count_2\tv_call_2\tj_call_2\tjunction_aa_2\n"
-            );
-
+    {
+      if (opt_nucleotides)
+        fprintf(pairsfile,
+                "#repertoire_id_1\tsequence_id_1\t"
+                "duplicate_count_1\tv_call_1\tj_call_1\tjunction_1\t"
+                "repertoire_id_2\tsequence_id_2\t"
+                "duplicate_count_2\tv_call_2\tj_call_2\tjunction_2\n");
+      else
+        fprintf(pairsfile,
+                "#repertoire_id_1\tsequence_id_1\t"
+                "duplicate_count_1\tv_call_1\tj_call_1\tjunction_aa_1\t"
+                "repertoire_id_2\tsequence_id_2\t"
+                "duplicate_count_2\tv_call_2\tj_call_2\tjunction_aa_2\n");
+    }
   if (opt_threads == 1)
     {
       sim_thread(0);

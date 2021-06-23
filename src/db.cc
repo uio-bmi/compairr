@@ -46,7 +46,28 @@ static signed char map_aa[256] =
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
   };
 
+static signed char map_nt[256] =
+  {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1,  0, -1,  1, -1, -1, -1,  2, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1,  3,  3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1,  0, -1,  1, -1, -1, -1,  2, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1,  3,  3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+  };
+
 const static char * aa_chars = "ACDEFGHIKLMNPQRSTVWY";
+const static char * nt_chars = "acgt";
 const char * EMPTYSTRING = "";
 
 struct seqinfo_s
@@ -85,6 +106,7 @@ static char * * j_gene_list = 0;
 static uint64_t j_gene_alloc = 0;
 static uint64_t j_gene_count = 0;
 
+static int col_junction = 0;
 static int col_junction_aa = 0;
 static int col_duplicate_count = 0;
 static int col_v_call = 0;
@@ -205,6 +227,10 @@ void parse_airr_tsv_header(char * line)
         {
           col_junction_aa = i;
         }
+      else if (strcmp(token, "junction") == 0)
+        {
+          col_junction = i;
+        }
       else if (strcmp(token, "duplicate_count") == 0)
         {
           col_duplicate_count = i;
@@ -229,7 +255,8 @@ void parse_airr_tsv_header(char * line)
     }
 
   if (! col_repertoire_id ||
-      ! col_junction_aa ||
+      ! (opt_nucleotides || col_junction_aa) ||
+      ! ((!opt_nucleotides) || col_junction) ||
       ! (opt_ignore_counts || col_duplicate_count) ||
       ! (opt_ignore_genes || col_v_call) ||
       ! (opt_ignore_genes || col_j_call))
@@ -244,8 +271,16 @@ void parse_airr_tsv_header(char * line)
         fprintf(logfile, " v_call");
       if (! (col_j_call || opt_ignore_genes))
         fprintf(logfile, " j_call");
-      if (! col_junction_aa)
-        fprintf(logfile, " junction_aa");
+      if (opt_nucleotides)
+        {
+          if (! col_junction)
+            fprintf(logfile, " junction");
+        }
+      else
+        {
+          if (! col_junction_aa)
+            fprintf(logfile, " junction_aa");
+        }
       fprintf(logfile, "\n");
       exit(1);
     }
@@ -253,6 +288,7 @@ void parse_airr_tsv_header(char * line)
 
 void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 {
+  char * junction = nullptr;
   char * junction_aa = nullptr;
   char * duplicate_count = nullptr;
   char * v_call = nullptr;
@@ -268,7 +304,11 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 
   while ((token = strsep(& string, delim)) != nullptr)
     {
-      if (i == col_junction_aa)
+      if (i == col_junction)
+        {
+          junction = token;
+        }
+      else if (i == col_junction_aa)
         {
           junction_aa = token;
         }
@@ -300,17 +340,30 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
   if (! (repertoire_id && *repertoire_id))
     {
       fprintf(logfile,
-              "\n\nError: missing or empty repertoire_id on line: %" PRIu64 "\n",
+              "\n\nError: missing or empty repertoire_id value on line: %" PRIu64 "\n",
               lineno);
       exit(1);
     }
 
-  if (! (junction_aa && *junction_aa))
+  if (opt_nucleotides)
     {
-      fprintf(logfile,
-              "\n\nError: missing or empty junction_aa on line: %" PRIu64 "\n",
-              lineno);
-      exit(1);
+      if (! (junction && *junction))
+        {
+          fprintf(logfile,
+                  "\n\nError: missing or empty junction value on line: %" PRIu64 "\n",
+                  lineno);
+          exit(1);
+        }
+    }
+  else
+    {
+      if (! (junction_aa && *junction_aa))
+        {
+          fprintf(logfile,
+                  "\n\nError: missing or empty junction_aa value on line: %" PRIu64 "\n",
+                  lineno);
+          exit(1);
+        }
     }
 
   if (! opt_ignore_genes)
@@ -318,14 +371,14 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
       if (! (v_call && *v_call))
         {
           fprintf(logfile,
-                  "\n\nError: missing or empty v_call on line: %" PRIu64 "\n",
+                  "\n\nError: missing or empty v_call value on line: %" PRIu64 "\n",
                   lineno);
           exit(1);
         }
       if (! (j_call && *j_call))
         {
           fprintf(logfile,
-                  "\n\nError: missing or empty j_call on line: %" PRIu64 "\n",
+                  "\n\nError: missing or empty j_call value on line: %" PRIu64 "\n",
                   lineno);
           exit(1);
         }
@@ -368,7 +421,11 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 
   /* make room for more residues */
 
-  unsigned int len_estimate = strlen(junction_aa);
+  unsigned int len_estimate = 0;
+  if (opt_nucleotides)
+    len_estimate = strlen(junction);
+  else
+    len_estimate = strlen(junction_aa);
 
   if (d->residues_count + len_estimate > d->residues_alloc)
     {
@@ -383,30 +440,62 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
   char * q = d->residues_p + d->residues_count;
   unsigned int seqlen = 0;
 
-  for(unsigned int i = 0; i < len_estimate; i++)
+  if (opt_nucleotides)
     {
-      unsigned char c = junction_aa[i];
-      signed char m = map_aa[static_cast<unsigned int>(c)];
-      if (m >= 0)
+      for(unsigned int i = 0; i < len_estimate; i++)
         {
-          *q++ = m;
-          seqlen++;
-        }
-      else
-        {
-          if ((c >= 32) && (c <= 126))
-            fprintf(logfile,
-                    "\n\nError: Illegal character '%c' in sequence "
-                    "on line %" PRIu64 "\n",
-                    c,
-                    lineno);
+          unsigned char c = junction[i];
+          signed char m = map_nt[static_cast<unsigned int>(c)];
+          if (m >= 0)
+            {
+              *q++ = m;
+              seqlen++;
+            }
           else
-            fprintf(logfile,
-                    "\n\nError: Illegal character (ascii no %d) in sequence "
-                    "on line %" PRIu64 "\n",
-                    c,
-                    lineno);
-          exit(1);
+            {
+              if ((c >= 32) && (c <= 126))
+                fprintf(logfile,
+                        "\n\nError: Illegal character '%c' in sequence "
+                        "on line %" PRIu64 "\n",
+                        c,
+                        lineno);
+              else
+                fprintf(logfile,
+                        "\n\nError: Illegal character (ascii no %d) in sequence "
+                        "on line %" PRIu64 "\n",
+                        c,
+                        lineno);
+              exit(1);
+            }
+        }
+    }
+  else
+    {
+      for(unsigned int i = 0; i < len_estimate; i++)
+        {
+          unsigned char c = junction_aa[i];
+          signed char m = map_aa[static_cast<unsigned int>(c)];
+          if (m >= 0)
+            {
+              *q++ = m;
+              seqlen++;
+            }
+          else
+            {
+              if ((c >= 32) && (c <= 126))
+                fprintf(logfile,
+                        "\n\nError: Illegal character '%c' in sequence "
+                        "on line %" PRIu64 "\n",
+                        c,
+                        lineno);
+              else
+                fprintf(logfile,
+                        "\n\nError: Illegal character (ascii no %d) in sequence "
+                        "on line %" PRIu64 "\n",
+                        c,
+                        lineno);
+              exit(1);
+            }
         }
     }
 
@@ -692,7 +781,7 @@ uint64_t db_get_j_gene(struct db * d, uint64_t seqno)
 
 uint64_t db_get_count(struct db * d, uint64_t seqno)
 {
-  return opt_ignore_counts ? 1 : d->seqindex[seqno].count;
+  return d->seqindex[seqno].count;
 }
 
 uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno)
@@ -738,6 +827,14 @@ void db_fprint_sequence(FILE * f, struct db * d, uint64_t seqno)
 {
   char * seq = db_getsequence(d, seqno);
   unsigned int len = db_getsequencelen(d, seqno);
-  for (unsigned int i = 0; i < len; i++)
-    fputc(aa_chars[(int)(seq[i])], f);
+  if (opt_nucleotides)
+    {
+      for (unsigned int i = 0; i < len; i++)
+        fputc(nt_chars[(int)(seq[i])], f);
+    }
+  else
+    {
+      for (unsigned int i = 0; i < len; i++)
+        fputc(aa_chars[(int)(seq[i])], f);
+    }
 }

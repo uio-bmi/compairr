@@ -113,7 +113,7 @@ const unsigned int MAX_THREADS = 256;
 #define MAX(x,y) ((x)>(y)?(x):(y))
 #endif
 
-const int alphabet_size = 20;
+extern int alphabet_size;
 
 enum
   {
@@ -133,6 +133,7 @@ extern bool opt_ignore_counts;
 extern bool opt_ignore_genes;
 extern bool opt_indels;
 extern bool opt_matrix;
+extern bool opt_nucleotides;
 extern bool opt_version;
 extern char * opt_log;
 extern char * opt_output_file;

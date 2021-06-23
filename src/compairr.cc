@@ -53,6 +53,7 @@ bool opt_ignore_counts;
 bool opt_ignore_genes;
 bool opt_indels;
 bool opt_matrix;
+bool opt_nucleotides;
 bool opt_version;
 char * opt_log;
 char * opt_output;
@@ -67,6 +68,8 @@ int64_t opt_threads;
 FILE * outfile = nullptr;
 FILE * logfile = nullptr;
 FILE * pairsfile = nullptr;
+
+int alphabet_size;
 
 static char dash[] = "-";
 static char * DASH_FILENAME = dash;
@@ -112,6 +115,7 @@ void args_show()
   fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
   if (opt_matrix)
     fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename ? input2_filename : "(same as set 1)");
+  fprintf(logfile, "Nucleotides (n):   %s\n", opt_nucleotides ? "Yes" : "No");
   fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
   fprintf(logfile, "Ignore counts (f): %s\n",
@@ -144,6 +148,7 @@ void args_usage()
   fprintf(stderr, " -i, --indels                allow insertions or deletions\n");
   fprintf(stderr, " -f, --ignore-counts         ignore duplicate_count information\n");
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
+  fprintf(stderr, " -n, --nucleotides           compare nucleotides, not amino acids\n");
   fprintf(stderr, " -s, --summands STRING       sum product (default), ratio, min, max, or mean\n");
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
   fprintf(stderr, "\n");
@@ -182,10 +187,11 @@ void args_init(int argc, char **argv)
   opt_version = false;
   opt_summands_int = 0;
   opt_summands_string = NULL;
+  opt_nucleotides = false;
 
   opterr = 1;
 
-  char short_options[] = "acd:fghil:mo:p:s:t:v";
+  char short_options[] = "acd:fghil:mno:p:s:t:v";
 
   /* unused short option letters: bejkqruwxyz */
 
@@ -200,6 +206,7 @@ void args_init(int argc, char **argv)
     {"indels",           no_argument,       nullptr, 'i' },
     {"log",              required_argument, nullptr, 'l' },
     {"matrix",           no_argument,       nullptr, 'm' },
+    {"nucleotides",      no_argument,       nullptr, 'n' },
     {"output",           required_argument, nullptr, 'o' },
     {"pairs",            required_argument, nullptr, 'p' },
     {"summands",         required_argument, nullptr, 's' },
@@ -290,6 +297,11 @@ void args_init(int argc, char **argv)
       case 'm':
         /* matrix */
         opt_matrix = true;
+        break;
+
+      case 'n':
+        /* nucleotides */
+        opt_nucleotides = true;
         break;
 
       case 'o':
@@ -399,6 +411,11 @@ void args_init(int argc, char **argv)
           fatal("Argument to -s or --summands must be product, ratio, min, max or mean");
         }
     }
+
+  if (opt_nucleotides)
+    alphabet_size = 4;
+  else
+    alphabet_size = 20;
 }
 
 void open_files()

@@ -57,6 +57,9 @@ differences are allowed. The `-i` option is allowed only when d=1.
 The V and J gene alleles specified for each sequence must also match,
 unless the `-g` or `--ignore-genes` option is in effect.
 
+The default is to compare amino acid sequences, but nucleotide
+sequences are compared if the `-n` or `--nucleotides` option is given.
+
 
 ## Computing overlap between two repertoire sets
 
@@ -70,23 +73,25 @@ The two input files are specified on the command line without any
 preceeding option letter. If only one filename is specified on the
 command line, or the same filename is specified twice, it is assumed
 that the set should be compared to itself. Each file must contain the
-amino acid sequence of the rearrangement, the V gene, the J gene, the
-duplicate count and the repertoire ID.
+repertoire ID and either the nucleotide or the amino acid sequence of
+the rearrangement. A sequence ID may also be included. Unless they
+should be ignored, the V gene, the J gene, and the duplicate count is
+also needed.
 
-Each set can contain many repertoires and each repertoire can
-contain many sequences.
-
-The tool will find the sequences in the two sets that are similar and
-output a matrix with results.
+Each set can contain many repertoires and each repertoire can contain
+many sequences. The tool will find the sequences in the two sets that
+are similar and output a matrix with results.
 
 The similar sequences of each repertoire in each set are found by
 comparing the sequences and their V and J genes.  The duplicate count
 of each sequence is taken into account and a matrix is output
 containing a value for each combination of repertoires in the two
-sets. The value is the sum of the products of the duplicate counts of
-all pairs of sequences in the two repertoires that match. If the
-option `-f` or `--ignore-frequency` is specified, the duplicate count
-information is ignored and all counts are set to 1.
+sets. The value is usually the sum of the products of the duplicate
+counts of all pairs of sequences in the two repertoires that match. If
+the option `-f` or `--ignore-frequency` is specified, the duplicate
+count information is ignored and all counts are set to 1. Instead of
+summing the product of the counts, the ratio, min, max, or mean may be
+used if specified with the `-s` or `--summand` option.
 
 The output will be a matrix of values in a tab-separated plain text
 file. Two different formats can be selected. In the default format,
@@ -108,10 +113,11 @@ If the `-p` or `--pairs` option is specified, CompAIRR will write
 information about all pairs of matching sequences to a specified TSV
 file. The following information will be included in the output:
 repertoire_id_1, sequence_id_1, duplicate_count_1, v_call_1, j_call_1,
-junction_aa_1, repertoire_id_2, sequence_id_2, duplicate_count_2,
-v_call_2, j_call_2, and junction_aa_2. Please note that such files may
-grow very large when there are many matches. Use of multithreading may
-be of little use in this case.
+junction_1 or junction_aa_1, repertoire_id_2, sequence_id_2,
+duplicate_count_2, v_call_2, j_call_2, and junction_2 or
+junction_aa_2. Please note that such files may grow very large when
+there are many matches. Use of multithreading may be of little use in
+this case. The order of the lines in the file is unspecified.
 
 
 ## Clustering the sequences in a repertoire
@@ -132,7 +138,7 @@ The output will be in a similar TSV format as the input file, but
 preceeded with two additional columns. The first column will contain a
 cluster number, starting at 1. The second column will contain the size
 of the cluster. The subsequent columns are repertoire_id, sequence_id,
-duplicate_count, v_call, j_call, and junction_aa.
+duplicate_count, v_call, j_call, and junction or junction_aa.
 
 The clusters are sorted by size, in descending order.
 
@@ -153,10 +159,11 @@ contain one line per sequence. The following fields should be included:
 * duplicate_count: number of identical copies of the same rearrangement (required unless `-f` option given)
 * v_call: V gene name with allele (required unless `-g` option given)
 * j_call: J gene name with allele (required unless `-g` option given)
-* junction_aa: amino acid sequence (single letter code) (required)
+* junction: nucleotide sequence (required if `-n` option given)
+* junction_aa: amino acid sequence (single letter code) (required unless `-n` option given)
 
-The sequence_id field is not required, but if given it will optionally be reported in
-the file specified with the `-p` or `--pairs` option.
+The sequence_id field is not required, but if given it will optionally
+be reported in the file specified with the `-p` or `--pairs` option.
 
 See below for an example. Other fields may be included, but will be
 ignored.
@@ -181,6 +188,8 @@ General options:
  -i, --indels                allow insertions or deletions
  -f, --ignore-counts         ignore duplicate_count information
  -g, --ignore-genes          ignore V and J gene information
+ -n, --nucleotides           compare nucleotides, not amino acids
+ -s, --summands STRING       sum product (default), ratio, min, max, or mean
  -t, --threads INTEGER       number of threads to use (1)
 
 Input/output options:
@@ -196,19 +205,19 @@ Input/output options:
 Let's use two simple input files. The first is `seta.tsv`:
 
 ```tsv
-repertoire_id	sequence_id	duplicate_count	v_call	j_call	junction_aa	sequence	rev_comp	productive	d_call	sequence_alignment	germline_alignment	junction	v_cigar	d_cigar	j_cigar
-A1	R	1	TCRBV07-06	TCRBJ02-01	CASSTSHEQYF										
-A2	S	3	TCRBV07-09	TCRBJ01-02	CASSLRVGGYGYTF										
-
+repertoire_id	sequence_id	duplicate_count	v_call	j_call	junction	junction_aa	sequence	rev_comp	productive	d_call	sequence_alignment	germline_alignment	v_cigar	d_cigar	j_cigar
+A1	R	1	TCRBV07-06	TCRBJ02-01	tgcgcgagcagcaccagccatgaacagtatttt	CASSTSHEQYF									
+A2	S	3	TCRBV07-09	TCRBJ01-02	tgcgcgagcagcctgcgcgtgggcggctatggctataccttt	CASSLRVGGYGYTF									
 ```
+
 
 The second is `setb.tsv`:
 
 ```tsv
-repertoire_id	sequence_id	duplicate_count	v_call	j_call	junction_aa	sequence	rev_comp	productive	d_call	sequence_alignment	germline_alignment	junction	v_cigar	d_cigar	j_cigar
-B1	T	5	TCRBV07-09	TCRBJ01-02	CASSLRVGGYGYTF										
-B1	U	10	TCRBV07-09	TCRBJ01-02	CASSLRVGGFGYTF										
-B2	V	7	TCRBV07-06	TCRBJ02-01	CASSTSHQQYF										
+repertoire_id	sequence_id	duplicate_count	v_call	j_call	junction	junction_aa	sequence	rev_comp	productive	d_call	sequence_alignment	germline_alignment	v_cigar	d_cigar	j_cigar
+B1	T	5	TCRBV07-09	TCRBJ01-02	tgcgcgagcagcctgcgcgtgggcggctatggctataccttt	CASSLRVGGYGYTF									
+B1	U	10	TCRBV07-09	TCRBJ01-02	tgcgcgagcagcctgcgcgtgggcggctttggctataccttt	CASSLRVGGFGYTF									
+B2	V	7	TCRBV07-06	TCRBJ02-01	tgcgcgagcagcaccagccatcagcagtatttt	CASSTSHQQYF									
 ```
 
 We run the following command:
@@ -225,14 +234,16 @@ Start time:        Fri Jun 18 13:31:25 CEST 2021
 Command (m/c):     Overlap
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
+Nucleotides (n):   No
 Differences (d):   1
 Indels (i):        No
 Ignore counts (f): No
 Ignore genes (g):  No
 Threads (t):       1
-Output format (a): Matrix
 Output file (o):   output.tsv
-Pairs file (p):    (none)
+Output format (a): Matrix
+Summands (s):      Product
+Pairs file (p):    pairs.tsv
 Log file (l):      (stderr)
 
 Immune receptor repertoire set 1
