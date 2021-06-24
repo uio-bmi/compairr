@@ -304,13 +304,13 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 
   while ((token = strsep(& string, delim)) != nullptr)
     {
-      if (i == col_junction)
+      if (i == col_repertoire_id)
         {
-          junction = token;
+          repertoire_id = token;
         }
-      else if (i == col_junction_aa)
+      else if (i == col_sequence_id)
         {
-          junction_aa = token;
+          sequence_id = token;
         }
       else if (i == col_duplicate_count)
         {
@@ -324,13 +324,13 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
         {
           j_call = token;
         }
-      else if (i == col_repertoire_id)
+      else if (i == col_junction)
         {
-          repertoire_id = token;
+          junction = token;
         }
-      else if (i == col_sequence_id)
+      else if (i == col_junction_aa)
         {
-          sequence_id = token;
+          junction_aa = token;
         }
       i++;
     }
@@ -569,7 +569,8 @@ void db_read(struct db * d, const char * filename)
       exit(1);
     }
   bool is_regular = S_ISREG(fs.st_mode);
-  int64_t filesize = is_regular ? fs.st_size : 0;
+  uint64_t filesize = is_regular ? (uint64_t)(fs.st_size) : 0;
+  uint64_t fileread = 0;
 
   if (! is_regular)
     fprintf(logfile, "Waiting for data from standard input...\n");
@@ -584,12 +585,14 @@ void db_read(struct db * d, const char * filename)
 
   int state = 0;
 
-  progress_init("Reading sequences:", static_cast<uint64_t>(filesize));
+  progress_init("Reading sequences:", filesize);
 
   linelen = getline(& line, & line_alloc, fp);
 
   if (linelen < 0)
     fatal("Unable to read from the input file");
+
+  fileread += linelen;
 
   if ((linelen > 0) && (line[linelen-1] == '\n'))
     {
@@ -631,7 +634,7 @@ void db_read(struct db * d, const char * filename)
       /* update progress */
 
       if (is_regular)
-        progress_update(static_cast<uint64_t>(ftell(fp)));
+        progress_update(fileread);
 
       /* get next line */
 
@@ -639,6 +642,8 @@ void db_read(struct db * d, const char * filename)
 
       if (linelen < 0)
         break;
+
+      fileread += linelen;
 
       /* remove LF at end of line */
 
