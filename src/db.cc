@@ -21,6 +21,10 @@
 
 #include "compairr.h"
 
+#include <string>
+#include <map>
+#include <vector>
+
 /* How much memory for residues and sequences should we allocate each time? */
 
 #define MEMCHUNK 1048576
@@ -94,17 +98,15 @@ struct db
   char * residues_p;
   uint64_t residues_alloc;
   uint64_t residues_count;
-  char * * repertoire_id_list;
-  uint64_t repertoire_id_alloc;
-  uint64_t repertoire_count;
+  std::vector<std::string> repertoire_id_vector;
+  std::map<std::string, int> repertoire_id_map;
 };
 
-static char * * v_gene_list = 0;
-static uint64_t v_gene_alloc = 0;
-static uint64_t v_gene_count = 0;
-static char * * j_gene_list = 0;
-static uint64_t j_gene_alloc = 0;
-static uint64_t j_gene_count = 0;
+static std::vector<std::string> v_gene_vector;
+static std::map<std::string, int> v_gene_map;
+
+static std::vector<std::string> j_gene_vector;
+static std::map<std::string, int> j_gene_map;
 
 static int col_junction = 0;
 static int col_junction_aa = 0;
@@ -116,69 +118,18 @@ static int col_sequence_id = 0;
 
 void db_init()
 {
-  v_gene_list = 0;
-  v_gene_alloc = 0;
-  v_gene_count = 0;
-  j_gene_list = 0;
-  j_gene_alloc = 0;
-  j_gene_count = 0;
+  v_gene_vector.clear();
+  v_gene_map.clear();
+  j_gene_vector.clear();
+  j_gene_map.clear();
 }
 
 void db_exit()
 {
-  if (v_gene_list)
-    {
-      for (uint64_t i = 0; i < v_gene_count; i++)
-	{
-	  xfree(v_gene_list[i]);
-	  v_gene_list[i] = 0;
-	}
-      xfree(v_gene_list);
-      v_gene_list = 0;
-    }
-
-  if (j_gene_list)
-    {
-      for (uint64_t i = 0; i < j_gene_count; i++)
-	{
-	  xfree(j_gene_list[i]);
-	  j_gene_list[i] = 0;
-	}
-      xfree(j_gene_list);
-      j_gene_list = 0;
-    }
-}
-
-uint64_t list_insert(char * * * list,
-                     uint64_t * alloc,
-                     uint64_t * count,
-                     uint64_t max,
-                     const char * item)
-{
-  /* linear list */
-
-  /* try to find it */
-  uint64_t c = *count;
-  for(uint64_t i = 0; i < c; i++)
-    if (strcmp(item, (*list)[i]) == 0)
-        return i;
-
-  /* expand if necessary */
-  if (c >= max)
-    {
-      fatal("Too many items (V genes, J genes, or repertoire ID's)");
-    }
-
-  if (c >= *alloc)
-    {
-      *alloc += 256;
-      *list = static_cast<char **>(xrealloc(*list, *alloc * sizeof(char*)));
-    }
-
-  /* insert */
-  (*list)[c] = strdup(item);
-  (*count)++;
-  return c;
+  v_gene_vector.clear();
+  v_gene_map.clear();
+  j_gene_vector.clear();
+  j_gene_map.clear();
 }
 
 int compare_byrepertoire_id(const void * a, const void * b)
@@ -196,7 +147,7 @@ int compare_byrepertoire_id(const void * a, const void * b)
 
 struct db * db_create()
 {
-  struct db * d = (struct db *) xmalloc(sizeof(struct db));
+  struct db * d = new db;
 
   d->seqindex = nullptr;
   d->seqindex_alloc = 0;
@@ -206,9 +157,8 @@ struct db * db_create()
   d->residues_p = nullptr;
   d->residues_alloc = 0;
   d->residues_count = 0;
-  d->repertoire_id_list = nullptr;
-  d->repertoire_id_alloc = 0;
-  d->repertoire_count = 0;
+  d->repertoire_id_vector.clear();
+  d->repertoire_id_map.clear();
 
   return d;
 }
@@ -499,23 +449,44 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
         }
     }
 
-  uint64_t v_gene_index = list_insert(& v_gene_list,
-                                      & v_gene_alloc,
-                                      & v_gene_count,
-                                      USHRT_MAX,
-                                      v_call ? v_call : "");
+  /* handle v_call */
+  auto v_it = v_gene_map.find(v_call);
+  if (v_it != v_gene_map.end())
+    {
+      p->v_gene_no = v_it->second;
+    }
+  else
+    {
+      p->v_gene_no = v_gene_vector.size();
+      v_gene_vector.push_back(v_call);
+      v_gene_map.insert({v_call, p->v_gene_no});
+    }
 
-  uint64_t j_gene_index = list_insert(& j_gene_list,
-                                      & j_gene_alloc,
-                                      & j_gene_count,
-                                      USHRT_MAX,
-                                      j_call ? j_call : "");
+  /* handle j_call */
+  auto j_it = j_gene_map.find(j_call);
+  if (j_it != j_gene_map.end())
+    {
+      p->j_gene_no = j_it->second;
+    }
+  else
+    {
+      p->j_gene_no = j_gene_vector.size();
+      j_gene_vector.push_back(j_call);
+      j_gene_map.insert({j_call, p->j_gene_no});
+    }
 
-  uint64_t repertoire_id_index = list_insert(& d->repertoire_id_list,
-                                             & d->repertoire_id_alloc,
-                                             & d->repertoire_count,
-                                             UINT_MAX,
-                                             repertoire_id);
+  /* handle repertoire_id */
+  auto r_it = d->repertoire_id_map.find(repertoire_id);
+  if (r_it != d->repertoire_id_map.end())
+    {
+      p->repertoire_id_no = r_it->second;
+    }
+  else
+    {
+      p->repertoire_id_no = d->repertoire_id_vector.size();
+      d->repertoire_id_vector.push_back(repertoire_id);
+      d->repertoire_id_map.insert({repertoire_id, p->repertoire_id_no});
+    }
 
   if (sequence_id && (*sequence_id))
     {
@@ -527,9 +498,6 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
     }
 
   p->seqlen = seqlen;
-  p->repertoire_id_no = repertoire_id_index;
-  p->v_gene_no = v_gene_index;
-  p->j_gene_no = j_gene_index;
   p->count = count;
   p->hash = 0;
 
@@ -682,7 +650,7 @@ void db_read(struct db * d, const char * filename)
           d->longest,
           1.0 * d->residues_count / d->sequences);
 
-  fprintf(logfile, "Repertoires:       %" PRIu64 "\n", d->repertoire_count);
+  fprintf(logfile, "Repertoires:       %lu\n", d->repertoire_id_vector.size());
 
   /* add sequence pointers to index table */
 
@@ -721,22 +689,13 @@ void db_hash(struct db * d)
 
 void db_free(struct db * d)
 {
-  if (d->repertoire_id_list)
-    {
-      for (uint64_t i = 0; i < d->repertoire_count; i++)
-	{
-	  xfree(d->repertoire_id_list[i]);
-	  d->repertoire_id_list[i] = 0;
-	}
-      xfree(d->repertoire_id_list);
-      d->repertoire_id_list = 0;
-    }
-
   if (d->residues_p)
     xfree(d->residues_p);
   if (d->seqindex)
     xfree(d->seqindex);
-  xfree(d);
+  d->repertoire_id_vector.clear();
+  d->repertoire_id_map.clear();
+  delete d;
 }
 
 uint64_t db_getsequencecount(struct db * d)
@@ -756,7 +715,7 @@ unsigned int db_getlongestsequence(struct db * d)
 
 uint64_t db_get_repertoire_count(struct db * d)
 {
-  return d->repertoire_count;
+  return d->repertoire_id_vector.size();
 }
 
 uint64_t db_gethash(struct db * d, uint64_t seqno)
@@ -794,9 +753,9 @@ uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno)
   return d->seqindex[seqno].repertoire_id_no;
 }
 
-char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no)
+const char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no)
 {
-  return d->repertoire_id_list[repertoire_id_no];
+  return d->repertoire_id_vector[repertoire_id_no].c_str();
 }
 
 char * db_get_sequence_id(struct db * d, uint64_t seqno)
@@ -810,22 +769,22 @@ char * db_get_sequence_id(struct db * d, uint64_t seqno)
 
 uint64_t db_get_v_gene_count()
 {
-  return v_gene_count;
+  return v_gene_vector.size();
 }
 
 uint64_t db_get_j_gene_count()
 {
-  return j_gene_count;
+  return j_gene_vector.size();
 }
 
-char * db_get_v_gene_name(struct db * d, uint64_t seqno)
+const char * db_get_v_gene_name(struct db * d, uint64_t seqno)
 {
-  return v_gene_list[d->seqindex[seqno].v_gene_no];
+  return v_gene_vector[d->seqindex[seqno].v_gene_no].c_str();
 }
 
-char * db_get_j_gene_name(struct db * d, uint64_t seqno)
+const char * db_get_j_gene_name(struct db * d, uint64_t seqno)
 {
-  return j_gene_list[d->seqindex[seqno].j_gene_no];
+  return j_gene_vector[d->seqindex[seqno].j_gene_no].c_str();
 }
 
 void db_fprint_sequence(FILE * f, struct db * d, uint64_t seqno)

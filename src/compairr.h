@@ -53,6 +53,9 @@
 #include <sys/stat.h>
 
 #include <chrono>
+#include <string>
+#include <vector>
+#include <map>
 
 #ifdef __APPLE__
 #include <sys/resource.h>
