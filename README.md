@@ -172,7 +172,7 @@ ignored.
 ## Command line options
 
 ```
-CompAIRR 1.3.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.3.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
@@ -227,7 +227,7 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 1.3.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.3.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Start time:        Fri Jun 18 13:31:25 CEST 2021
@@ -352,17 +352,17 @@ As a preliminary performance test, Cohort 2 ("Keck") of [the
 dataset](https://s3-us-west-2.amazonaws.com/publishedproject-supplements/emerson-2017-natgen/emerson-2017-natgen.zip)
 by Emerson et al. was compared to itself. It contains 120 repertoires
 with a total of 24 205 557 extracted sequences. The test was performed
-with CompAIRR version 1.0.0. The timing results are shown below.
+with CompAIRR version 1.3.1. The timing results are shown below.
 
 Distance | Indels | Threads | Time (s) | Time (mm:ss)
 -------: | :----: | ------: | -------: | -----------:
-0 | no | 1 | 37 | 0:37
-0 | no | 4 | 32 | 0:32
-1 | no | 1 | 245 | 4:05
-1 | no | 4 | 90 | 1:30
-1 | yes | 1 | 412 | 6:52
-1 | yes | 4 | 134 | 2:14
-2 | no | 4 | 3615 | 60:15
+0 | no | 1 | 18 | 0:18
+0 | no | 4 | 12 | 0:12
+1 | no | 1 | 224 | 3:44
+1 | no | 4 | 72 | 1:12
+1 | yes | 1 | 367 | 6:07
+1 | yes | 4 | 111 | 1:51
+2 | no | 4 | 3200 | 53:20
 
 When the distance is zero almost all of the time was used to read
 files.
