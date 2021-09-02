@@ -95,29 +95,30 @@ used if specified with the `-s` or `--summand` option.
 
 The output will be a matrix of values in a tab-separated plain text
 file. Two different formats can be selected. In the default format,
-the first line contains the character '#' followed by the repertoire
-ID's from the second set. The following lines contains the repertoire
-ID from the first set, followed by the values corresponding to the
-comparison of this repertoire with each of the repertoires in the
-second set.
+the first line contains the hash character (`#`) followed by the
+repertoire ID's from the second set. The following lines contains the
+repertoire ID from the first set, followed by the values corresponding
+to the comparison of this repertoire with each of the repertoires in
+the second set.
 
 An alternative output format is used when the `-a` or `--alternative`
 option is specified. It will write the results in a three column
 format with the repertoire ID from set 1 and set 2 in the two first
 columns, respectively, and the value in the third column. There will
 be one line for each combination of repertoires in the sets. The very
-first line will contain a `#` character followed by the field names
-separated by tabs.
+first line will contain a hash character (`#`) followed by the field
+names separated by tabs.
 
 If the `-p` or `--pairs` option is specified, CompAIRR will write
 information about all pairs of matching sequences to a specified TSV
 file. The following information will be included in the output:
-repertoire_id_1, sequence_id_1, duplicate_count_1, v_call_1, j_call_1,
-junction_1 or junction_aa_1, repertoire_id_2, sequence_id_2,
-duplicate_count_2, v_call_2, j_call_2, and junction_2 or
-junction_aa_2. Please note that such files may grow very large when
-there are many matches. Use of multithreading may be of little use in
-this case. The order of the lines in the file is unspecified.
+`repertoire_id_1`, `sequence_id_1`, `duplicate_count_1`, `v_call_1`,
+`j_call_1`, `junction_1` or `junction_aa_1`, `repertoire_id_2`,
+`sequence_id_2`, `duplicate_count_2`, `v_call_2`, `j_call_2`, and
+`junction_2` or `junction_aa_2`. Please note that such files may grow
+very large when there are many matches. Use of multithreading may be
+of little use in this case. The order of the lines in the file is
+unspecified.
 
 
 ## Clustering the sequences in a repertoire
@@ -137,8 +138,9 @@ specified.
 The output will be in a similar TSV format as the input file, but
 preceeded with two additional columns. The first column will contain a
 cluster number, starting at 1. The second column will contain the size
-of the cluster. The subsequent columns are repertoire_id, sequence_id,
-duplicate_count, v_call, j_call, and junction or junction_aa.
+of the cluster. The subsequent columns are `repertoire_id`,
+`sequence_id`, `duplicate_count`, `v_call`, `j_call`, and `junction`
+or `junction_aa`.
 
 The clusters are sorted by size, in descending order.
 
@@ -154,15 +156,15 @@ documentation](https://docs.airr-community.org/en/stable/).
 The first line must contain the header. The rest of the file must
 contain one line per sequence. The following fields should be included:
 
-* repertoire_id: identifier of the repertoire (required)
-* sequence_id: identifier of the sequence (optional)
-* duplicate_count: number of identical copies of the same rearrangement (required unless `-f` option given)
-* v_call: V gene name with allele (required unless `-g` option given)
-* j_call: J gene name with allele (required unless `-g` option given)
-* junction: nucleotide sequence (required if `-n` option given)
-* junction_aa: amino acid sequence (single letter code) (required unless `-n` option given)
+* `repertoire_id`: identifier of the repertoire (required)
+* `sequence_id`: identifier of the sequence (optional)
+* `duplicate_count`: number of identical copies of the same rearrangement (required unless `-f` option given)
+* `v_call`: V gene name with allele (required unless `-g` option given)
+* `j_call`: J gene name with allele (required unless `-g` option given)
+* `junction`: nucleotide sequence (required if `-n` option given)
+* `junction_aa`: amino acid sequence (single letter code) (required unless `-n` option given)
 
-The sequence_id field is not required, but if given it will optionally
+The `sequence_id` field is not required, but if given it will optionally
 be reported in the file specified with the `-p` or `--pairs` option.
 
 See below for an example. Other fields may be included, but will be
@@ -337,20 +339,20 @@ automatically be tested by running `make test`.
 
 The program is written in C++. The strategy for finding similar
 sequences is based on a similar concept developed in
-[swarm](https://github.com/torognes/swarm). Basically, a 64-bit hash
-is computed for all sequences in the sets. All hashes for one set are
-stored in a Bloom filter and in a hash table. We then look for matches
-to sequences in the second set by looking them up in the Bloom filter
-and then, if there was a match, in the hash table. To find matches
-with 1 or 2 substitutions or indels, the hashes of all these
-'microvariants' are generated and looked up.
+[Swarm](https://github.com/torognes/swarm) (Mahé et al
+2021). Basically, a 64-bit hash is computed for all sequences in the
+sets. All hashes for one set are stored in a Bloom filter and in a
+hash table. We then look for matches to sequences in the second set by
+looking them up in the Bloom filter and then, if there was a match, in
+the hash table. To find matches with 1 or 2 substitutions or indels,
+the hashes of all these 'microvariants' are generated and looked up.
 
 
 ## Performance
 
 As a preliminary performance test, Cohort 2 ("Keck") of [the
 dataset](https://s3-us-west-2.amazonaws.com/publishedproject-supplements/emerson-2017-natgen/emerson-2017-natgen.zip)
-by Emerson et al. was compared to itself. It contains 120 repertoires
+by Emerson et al. (2017) was compared to itself. It contains 120 repertoires
 with a total of 24 205 557 extracted sequences. The test was performed
 with CompAIRR version 1.3.1. The timing results are shown below.
 
@@ -375,7 +377,14 @@ is only read once, and the memory needed is also reduced as compared
 to a situation were two different repertoire sets are compared.
 
 Wall time and memory usage was measured by `/usr/bin/time`. The
-analysis was performed on a Mac Mini M1.
+analysis was performed on an Apple Mac Mini M1 (2020) with 16GB RAM.
+
+
+## Tips
+
+If computer memory is limited, the dataset may be split into blocks
+and before running CompAIRR. Results then needs to be merged togther
+afterwards. This may be acheived with a simple script.
 
 
 ## Development team
@@ -418,3 +427,5 @@ If you would like to contribute with code you are most welcome to
 ## References
 
 * Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017) **Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.** *Nature Genetics*, 49 (5): 659-665. doi:[10.1038/ng.3822](https://doi.org/10.1038/ng.3822)
+
+* Mahé F, Czech L, Stamatakis A, Quince C, de Vargas C, Dunthorn M, Rognes T (2021) **Swarm v3: Towards Tera-Scale Amplicon Clustering.** *Bioinformatics*, btab493. doi:[10.1093/bioinformatics/btab493](https://doi.org/10.1093/bioinformatics/btab493)
