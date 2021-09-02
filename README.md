@@ -384,8 +384,9 @@ analysis was performed on an Apple Mac Mini M1 (2020) with 16GB RAM.
 ## Tips
 
 If computer memory is limited, the dataset may be split into blocks
-and before running CompAIRR. Results then needs to be merged togther
-afterwards. This may be acheived with a simple script.
+before running CompAIRR on each block separately. Results then needs
+to be merged together again afterwards. This may be achieved with a
+simple script. We will consider providing such a script.
 
 
 ## Development team
