@@ -338,14 +338,15 @@ automatically be tested by running `make test`.
 ## Implementation
 
 The program is written in C++. The strategy for finding similar
-sequences is based on a similar concept developed in
-[Swarm](https://github.com/torognes/swarm) (Mahé et al
+sequences is based on a similar concept developed for the tool
+[Swarm](https://github.com/torognes/swarm) (Mahé et al.
 2021). Basically, a 64-bit hash is computed for all sequences in the
 sets. All hashes for one set are stored in a Bloom filter and in a
 hash table. We then look for matches to sequences in the second set by
 looking them up in the Bloom filter and then, if there was a match, in
 the hash table. To find matches with 1 or 2 substitutions or indels,
-the hashes of all these 'microvariants' are generated and looked up.
+the hashes of all these variants sequences are generated and looked
+up.
 
 
 ## Performance
@@ -397,15 +398,6 @@ benchmarked the tool, and suggested new features. Milena Pavlovic and
 Victor Greiff have also contributed to the project.
 
 
-## Citing CompAIRR
-
-We are preparing a manuscript about CompAIRR, but it is not yet
-available. For the time being, please cite the following if you use
-CompAIRR in any published work:
-
-* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** (in prep.)
-
-
 ## Support
 
 We will prioritize fixing important bugs. We will also try to answer
@@ -422,6 +414,15 @@ please use one of the following means:
 
 If you would like to contribute with code you are most welcome to
 [submit a pull request](https://github.com/uio-bmi/compairr/pulls).
+
+
+## Citing CompAIRR
+
+We are preparing a manuscript about CompAIRR, but it is not yet
+available. For the time being, please cite the following if you use
+CompAIRR in any published work:
+
+* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** (in prep.)
 
 
 ## References
