@@ -176,7 +176,7 @@ ignored.
 ## Command line options
 
 ```
-CompAIRR 1.3.1 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.3.2 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
@@ -231,10 +231,10 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 1.3.1 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.3.2 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
-Start time:        Fri Jun 18 13:31:25 CEST 2021
+Start time:        Wed Oct 13 17:06:11 CEST 2021
 Command (m/c):     Overlap
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
@@ -294,7 +294,7 @@ Hashing sequences: 100% (0s)
 Analysing:         100% (0s)
 Writing results:   100% (0s)
 
-End time:          Fri Jun 18 13:31:25 CEST 2021
+End time:          Wed Oct 13 17:06:11 CEST 2021
 ```
 
 Repertoires will be sorted alphabetically by ID. The program gives some
