@@ -80,10 +80,10 @@ struct seqinfo_s
   uint64_t count;
   char * sequence_id;
   char * seq;
-  unsigned short seqlen;
-  unsigned short repertoire_id_no;
-  unsigned short v_gene_no;
-  unsigned short j_gene_no;
+  unsigned int seqlen;
+  int repertoire_id_no;
+  int v_gene_no;
+  int j_gene_no;
 };
 
 typedef struct seqinfo_s seqinfo_t;
@@ -100,21 +100,22 @@ struct db
   uint64_t residues_count;
   std::vector<std::string> repertoire_id_vector;
   std::map<std::string, int> repertoire_id_map;
+  int col_junction;
+  int col_junction_aa;
+  int col_duplicate_count;
+  int col_v_call;
+  int col_j_call;
+  int col_repertoire_id;
+  int col_sequence_id;
 };
+
+/* v and j genes are common to both */
 
 static std::vector<std::string> v_gene_vector;
 static std::map<std::string, int> v_gene_map;
 
 static std::vector<std::string> j_gene_vector;
 static std::map<std::string, int> j_gene_map;
-
-static int col_junction = 0;
-static int col_junction_aa = 0;
-static int col_duplicate_count = 0;
-static int col_v_call = 0;
-static int col_j_call = 0;
-static int col_repertoire_id = 0;
-static int col_sequence_id = 0;
 
 void db_init()
 {
@@ -159,11 +160,18 @@ struct db * db_create()
   d->residues_count = 0;
   d->repertoire_id_vector.clear();
   d->repertoire_id_map.clear();
+  d->col_junction = 0;
+  d->col_junction_aa = 0;
+  d->col_duplicate_count = 0;
+  d->col_v_call = 0;
+  d->col_j_call = 0;
+  d->col_repertoire_id = 0;
+  d->col_sequence_id = 0;
 
   return d;
 }
 
-void parse_airr_tsv_header(char * line)
+void parse_airr_tsv_header(char * line, struct db * d)
 {
   char delim[] = "\t";
   char * string = line;
@@ -175,60 +183,60 @@ void parse_airr_tsv_header(char * line)
     {
       if (strcmp(token, "junction_aa") == 0)
         {
-          col_junction_aa = i;
+          d->col_junction_aa = i;
         }
       else if (strcmp(token, "junction") == 0)
         {
-          col_junction = i;
+          d->col_junction = i;
         }
       else if (strcmp(token, "duplicate_count") == 0)
         {
-          col_duplicate_count = i;
+          d->col_duplicate_count = i;
         }
       else if (strcmp(token, "v_call") == 0)
         {
-          col_v_call = i;
+          d->col_v_call = i;
         }
       else if (strcmp(token, "j_call") == 0)
         {
-          col_j_call = i;
+          d->col_j_call = i;
         }
       else if (strcmp(token, "repertoire_id") == 0)
         {
-          col_repertoire_id = i;
+          d->col_repertoire_id = i;
         }
       else if (strcmp(token, "sequence_id") == 0)
         {
-          col_sequence_id = i;
+          d->col_sequence_id = i;
         }
       i++;
     }
 
-  if (! col_repertoire_id ||
-      ! (opt_nucleotides || col_junction_aa) ||
-      ! ((!opt_nucleotides) || col_junction) ||
-      ! (opt_ignore_counts || col_duplicate_count) ||
-      ! (opt_ignore_genes || col_v_call) ||
-      ! (opt_ignore_genes || col_j_call))
+  if (! d->col_repertoire_id ||
+      ! (opt_nucleotides || d->col_junction_aa) ||
+      ! ((!opt_nucleotides) || d->col_junction) ||
+      ! (opt_ignore_counts || d->col_duplicate_count) ||
+      ! (opt_ignore_genes || d->col_v_call) ||
+      ! (opt_ignore_genes || d->col_j_call))
     {
       fprintf(logfile,
         "\nMissing essential column(s) in header of AIRR TSV input file:");
-      if (! col_repertoire_id)
+      if (! d->col_repertoire_id)
         fprintf(logfile, " repertoire_id");
-      if (! (col_duplicate_count || opt_ignore_counts))
+      if (! (d->col_duplicate_count || opt_ignore_counts))
         fprintf(logfile, " duplicate_count");
-      if (! (col_v_call || opt_ignore_genes))
+      if (! (d->col_v_call || opt_ignore_genes))
         fprintf(logfile, " v_call");
-      if (! (col_j_call || opt_ignore_genes))
+      if (! (d->col_j_call || opt_ignore_genes))
         fprintf(logfile, " j_call");
       if (opt_nucleotides)
         {
-          if (! col_junction)
+          if (! d->col_junction)
             fprintf(logfile, " junction");
         }
       else
         {
-          if (! col_junction_aa)
+          if (! d->col_junction_aa)
             fprintf(logfile, " junction_aa");
         }
       fprintf(logfile, "\n");
@@ -254,31 +262,31 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 
   while ((token = strsep(& string, delim)) != nullptr)
     {
-      if (i == col_repertoire_id)
+      if (i == d->col_repertoire_id)
         {
           repertoire_id = token;
         }
-      else if (i == col_sequence_id)
+      else if (i == d->col_sequence_id)
         {
           sequence_id = token;
         }
-      else if (i == col_duplicate_count)
+      else if (i == d->col_duplicate_count)
         {
           duplicate_count = token;
         }
-      else if (i == col_v_call)
+      else if (i == d->col_v_call)
         {
           v_call = token;
         }
-      else if (i == col_j_call)
+      else if (i == d->col_j_call)
         {
           j_call = token;
         }
-      else if (i == col_junction)
+      else if (i == d->col_junction)
         {
           junction = token;
         }
-      else if (i == col_junction_aa)
+      else if (i == d->col_junction_aa)
         {
           junction_aa = token;
         }
@@ -338,24 +346,23 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 
   if (! opt_ignore_counts)
     {
-      if (! (duplicate_count && *duplicate_count))
+      if (duplicate_count && *duplicate_count)
+        {
+          char * endptr;
+          count = strtol(duplicate_count, &endptr, 10);
+          if ((endptr == nullptr) || (*endptr) || (count < 1))
+            {
+              fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
+                      PRIu64 ": %s\n", lineno, duplicate_count);
+              exit(1);
+            }
+        }
+      else
         {
           fprintf(logfile,
                   "\n\nError: missing or empty duplicate_count on line: %"
                   PRIu64 "\n",
                   lineno);
-          exit(1);
-        }
-    }
-
-  if (duplicate_count && *duplicate_count)
-    {
-      char * endptr;
-      count = strtol(duplicate_count, &endptr, 10);
-      if ((endptr == nullptr) || (*endptr) || (count < 1))
-        {
-          fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
-                  PRIu64 ": %s\n", lineno, duplicate_count);
           exit(1);
         }
     }
@@ -449,30 +456,38 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
         }
     }
 
-  /* handle v_call */
-  auto v_it = v_gene_map.find(v_call);
-  if (v_it != v_gene_map.end())
+  if (opt_ignore_genes)
     {
-      p->v_gene_no = v_it->second;
+      p->v_gene_no = 0;
+      p->j_gene_no = 0;
     }
   else
     {
-      p->v_gene_no = v_gene_vector.size();
-      v_gene_vector.push_back(v_call);
-      v_gene_map.insert({v_call, p->v_gene_no});
-    }
+      /* handle v_call */
+      auto v_it = v_gene_map.find(v_call);
+      if (v_it != v_gene_map.end())
+        {
+          p->v_gene_no = v_it->second;
+        }
+      else
+        {
+          p->v_gene_no = v_gene_vector.size();
+          v_gene_vector.push_back(v_call);
+          v_gene_map.insert({v_call, p->v_gene_no});
+        }
 
-  /* handle j_call */
-  auto j_it = j_gene_map.find(j_call);
-  if (j_it != j_gene_map.end())
-    {
-      p->j_gene_no = j_it->second;
-    }
-  else
-    {
-      p->j_gene_no = j_gene_vector.size();
-      j_gene_vector.push_back(j_call);
-      j_gene_map.insert({j_call, p->j_gene_no});
+      /* handle j_call */
+      auto j_it = j_gene_map.find(j_call);
+      if (j_it != j_gene_map.end())
+        {
+          p->j_gene_no = j_it->second;
+        }
+      else
+        {
+          p->j_gene_no = j_gene_vector.size();
+          j_gene_vector.push_back(j_call);
+          j_gene_map.insert({j_call, p->j_gene_no});
+        }
     }
 
   /* handle repertoire_id */
@@ -590,7 +605,7 @@ void db_read(struct db * d, const char * filename)
             }
           else
             {
-              parse_airr_tsv_header(line);
+              parse_airr_tsv_header(line, d);
               state = 1;
             }
         }

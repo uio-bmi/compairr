@@ -328,12 +328,6 @@ void sim_thread(int64_t t)
   struct var_s * variant_list = static_cast<struct var_s *>
     (xmalloc(maxvar * sizeof(struct var_s)));
 
-  uint64_t * repertoire_matrix_local = static_cast<uint64_t *>
-    (xmalloc(set1_repertoires * set2_repertoires * sizeof(uint64_t)));
-
-  for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
-    repertoire_matrix_local[k] = 0;
-
 #ifdef AVOID_DUPLICATES
   /* init bloom filter for duplicates */
   uint64_t bloomsize = 1;
@@ -342,7 +336,18 @@ void sim_thread(int64_t t)
   struct bloom_s * bloom_d = bloom_init(bloomsize);
 #endif
 
-  pthread_mutex_lock(&network_mutex);
+  uint64_t * repertoire_matrix_local = nullptr;
+  if (opt_threads > 1)
+    {
+      /* if multiple threads, create local matrix */
+      repertoire_matrix_local = static_cast<uint64_t *>
+        (xmalloc(set1_repertoires * set2_repertoires * sizeof(uint64_t)));
+
+      for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+        repertoire_matrix_local[k] = 0;
+
+      pthread_mutex_lock(&network_mutex);
+    }
 
   while (network_progress < set1_sequences)
     {
@@ -353,35 +358,43 @@ void sim_thread(int64_t t)
       progress_update(network_progress);
       uint64_t chunksize = network_progress - firstseed;
 
-      pthread_mutex_unlock(&network_mutex);
+      if (opt_threads > 1)
+        {
+          pthread_mutex_unlock(&network_mutex);
+        }
 
       /* process chunksize sequences starting at seed */
+
       for (uint64_t z = 0; z < chunksize; z++)
         {
           uint64_t seed = firstseed + z;
-
 #ifdef AVOID_DUPLICATES
-          process_variants_avoid_duplicates(seed,
-                                            variant_list,
-                                            repertoire_matrix_local,
-                                            bloom_d,
-                                            & pairs_alloc,
-                                            & pairs_count,
-                                            & pairs_list);
+          process_variants_avoid_duplicates
+            (seed,
+             variant_list,
+             opt_threads > 1 ? repertoire_matrix_local : repertoire_matrix,
+             bloom_d,
+             & pairs_alloc,
+             & pairs_count,
+             & pairs_list);
 #else
-          process_variants(seed,
-                           variant_list,
-                           repertoire_matrix_local,
-                           & pairs_alloc,
-                           & pairs_count,
-                           & pairs_list);
+          process_variants
+            (seed,
+             variant_list,
+             opt_threads > 1 ? repertoire_matrix_local : repertoire_matrix,
+             & pairs_alloc,
+             & pairs_count,
+             & pairs_list);
 #endif
+        }
+
+      if (opt_threads > 1)
+        {
+          pthread_mutex_lock(&network_mutex);
         }
 
       if (opt_pairs)
         {
-          if (opt_threads > 1)
-            pthread_mutex_lock(&pairs_mutex);
           for (uint64_t i = 0; i < pairs_count; i++)
             {
               uint64_t a = pairs_list[i].seq[0];
@@ -406,24 +419,24 @@ void sim_thread(int64_t t)
               fprintf(pairsfile, "\n");
             }
           pairs_count = 0;
-          if (opt_threads > 1)
-            pthread_mutex_unlock(&pairs_mutex);
         }
-
-      pthread_mutex_lock(&network_mutex);
     }
 
-  /* update global repertoire_matrix */
-  for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
-    repertoire_matrix[k] += repertoire_matrix_local[k];
+  if (opt_threads > 1)
+    {
+      /* update global repertoire_matrix */
+      for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+        repertoire_matrix[k] += repertoire_matrix_local[k];
 
-  pthread_mutex_unlock(&network_mutex);
+      pthread_mutex_unlock(&network_mutex);
+
+      xfree(repertoire_matrix_local);
+    }
 
 #ifdef AVOID_DUPLICATES
   bloom_exit(bloom_d);
 #endif
 
-  xfree(repertoire_matrix_local);
   xfree(variant_list);
 
   if (opt_pairs)
