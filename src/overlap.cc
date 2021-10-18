@@ -56,6 +56,7 @@ typedef struct pair_s
 //#define AVOID_DUPLICATES 1
 
 const uint64_t CHUNK = 1000;
+const char * empty_string = "";
 
 void hash_insert(uint64_t rearr)
 {
@@ -400,9 +401,18 @@ void sim_thread(int64_t t)
               uint64_t a = pairs_list[i].seq[0];
               uint64_t b = pairs_list[i].seq[1];
 
+              const char * rep_id1 = empty_string;
+              uint64_t rep_id_no1 = db_get_repertoire_id_no(d1, a);
+              if (opt_matrix)
+                rep_id1 = db_get_repertoire_id(d1, rep_id_no1);
+
+              const char * rep_id2 = empty_string;
+              uint64_t rep_id_no2 = db_get_repertoire_id_no(d2, b);
+              // rep_id2 = db_get_repertoire_id(d2, rep_id_no2);
+
               fprintf(pairsfile,
                       "%s\t%s\t%" PRIu64 "\t%s\t%s\t",
-                      db_get_repertoire_id(d1, db_get_repertoire_id_no(d1, a)),
+                      rep_id1,
                       db_get_sequence_id(d1, a),
                       db_get_count(d1, a),
                       db_get_v_gene_name(d1, a),
@@ -410,7 +420,7 @@ void sim_thread(int64_t t)
               db_fprint_sequence(pairsfile, d1, a);
               fprintf(pairsfile,
                       "\t%s\t%s\t%" PRIu64 "\t%s\t%s\t",
-                      db_get_repertoire_id(d2, db_get_repertoire_id_no(d2, b)),
+                      rep_id2,
                       db_get_sequence_id(d2, b),
                       db_get_count(d2, b),
                       db_get_v_gene_name(d2, b),
@@ -452,7 +462,10 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /**** Set 1 ****/
 
-  fprintf(logfile, "Immune receptor repertoire set 1\n\n");
+  if (opt_matrix)
+    fprintf(logfile, "Immune receptor repertoire set 1\n\n");
+  else
+    fprintf(logfile, "Immune receptor reference repertoire\n\n");
 
   d1 = db_create();
   db_read(d1, set1_filename);
@@ -507,30 +520,45 @@ void overlap(char * set1_filename, char * set2_filename)
   int w2 = MAX(9, 1 + floor(log10(sum_size)));
   int w3 = MAX(5, 1 + floor(log10(sum_count)));
 
-  fprintf(logfile, "Repertoires:\n");
-  fprintf(logfile, "%*s %*s %*s %s\n",
-          w1, "#",
-          w2, "Sequences",
-          w3, "Count",
-          "Repertoire ID");
-  for (unsigned int i = 0; i < set1_repertoires; i++)
+  if (opt_matrix)
     {
-      unsigned int s = set1_lookup_repertoire[i];
-      fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
-              w1, i+1,
-              w2, set1_repertoire_size[s],
-              w3, set1_repertoire_count[s],
-              db_get_repertoire_id(d1, s));
+      fprintf(logfile, "Repertoires in set:\n");
+      fprintf(logfile, "%*s %*s %*s %s\n",
+              w1, "#",
+              w2, "Sequences",
+              w3, "Count",
+              "Repertoire ID");
+      for (unsigned int i = 0; i < set1_repertoires; i++)
+        {
+          unsigned int s = set1_lookup_repertoire[i];
+          fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
+                  w1, i+1,
+                  w2, set1_repertoire_size[s],
+                  w3, set1_repertoire_count[s],
+                  db_get_repertoire_id(d1, s));
+        }
+#if 0
+      fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n",
+              w1, "Sum",
+              w2, sum_size,
+              w3, sum_count);
+#endif
+      fprintf(logfile, "\n");
     }
-  fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n\n",
-          w1, "Sum",
-          w2, sum_size,
-          w3, sum_count);
+  else
+    {
+      if (set1_repertoires > 1)
+        fatal("Multiple repertoires are not allowed in the first file specified on the command line with the -x or --existence command.");
+    }
+
 
 
   /**** Set 2 ****/
 
-  fprintf(logfile, "Immune receptor repertoire set 2\n\n");
+  if (opt_matrix)
+    fprintf(logfile, "Immune receptor repertoire set 2\n\n");
+  else
+    fprintf(logfile, "Immune receptor repertoire set\n\n");
 
   if (set2_filename && strcmp(set1_filename, set2_filename))
     {
@@ -586,31 +614,46 @@ void overlap(char * set1_filename, char * set2_filename)
       int w1 = MAX(3, 1 + floor(log10(set2_repertoires)));
       int w2 = MAX(9, 1 + floor(log10(sum_size)));
       int w3 = MAX(5, 1 + floor(log10(sum_count)));
-
-      fprintf(logfile, "Repertoires:\n");
-      fprintf(logfile, "%*s %*s %*s %s\n",
-              w1, "#",
-              w2, "Sequences",
-              w3, "Count",
-              "Repertoire ID");
-      for (unsigned int i = 0; i < set2_repertoires; i++)
+      
+      if (set2_repertoires > 0)
         {
-          unsigned int s = set2_lookup_repertoire[i];
-          fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
-                  w1, i+1,
-                  w2, set2_repertoire_size[s],
-                  w3, set2_repertoire_count[s],
-                  db_get_repertoire_id(d2, s));
+          fprintf(logfile, "Repertoires in set:\n");
+          fprintf(logfile, "%*s %*s %*s %s\n",
+                  w1, "#",
+                  w2, "Sequences",
+                  w3, "Count",
+                  "Repertoire ID");
+          for (unsigned int i = 0; i < set2_repertoires; i++)
+            {
+              unsigned int s = set2_lookup_repertoire[i];
+              fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
+                      w1, i+1,
+                      w2, set2_repertoire_size[s],
+                      w3, set2_repertoire_count[s],
+                      db_get_repertoire_id(d2, s));
+            }
+#if 0
+          fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n",
+                  w1, "Sum",
+                  w2, sum_size,
+                  w3, sum_count);
+#endif
+          fprintf(logfile, "\n");
         }
-      fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n\n",
-              w1, "Sum",
-              w2, sum_size,
-              w3, sum_count);
+      else
+        {
+          fatal("Repertoire set missing repertoire_id.");
+        }
     }
   else
     {
       /* set2 = set1 */
 
+      if (set2_repertoires == 0)
+        {
+          fatal("Repertoire set is missing repertoire_id.");
+        }
+      
       d2 = d1;
 
       fprintf(logfile, "Set 2 is identical to set 1\n");

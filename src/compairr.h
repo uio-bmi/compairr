@@ -131,6 +131,7 @@ enum
 
 extern bool opt_alternative;
 extern bool opt_cluster;
+extern bool opt_existence;
 extern bool opt_help;
 extern bool opt_ignore_counts;
 extern bool opt_ignore_genes;

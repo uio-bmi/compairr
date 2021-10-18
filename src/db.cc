@@ -98,6 +98,7 @@ struct db
   char * residues_p;
   uint64_t residues_alloc;
   uint64_t residues_count;
+  uint64_t total_duplicate_count;
   std::vector<std::string> repertoire_id_vector;
   std::map<std::string, int> repertoire_id_map;
   int col_junction;
@@ -158,6 +159,7 @@ struct db * db_create()
   d->residues_p = nullptr;
   d->residues_alloc = 0;
   d->residues_count = 0;
+  d->total_duplicate_count = 0;
   d->repertoire_id_vector.clear();
   d->repertoire_id_map.clear();
   d->col_junction = 0;
@@ -212,7 +214,8 @@ void parse_airr_tsv_header(char * line, struct db * d)
       i++;
     }
 
-  if (! d->col_repertoire_id ||
+  if (! (opt_existence || opt_cluster || d->col_repertoire_id) ||
+      ! (opt_matrix || opt_cluster || d->col_sequence_id) ||
       ! (opt_nucleotides || d->col_junction_aa) ||
       ! ((!opt_nucleotides) || d->col_junction) ||
       ! (opt_ignore_counts || d->col_duplicate_count) ||
@@ -221,8 +224,10 @@ void parse_airr_tsv_header(char * line, struct db * d)
     {
       fprintf(logfile,
         "\nMissing essential column(s) in header of AIRR TSV input file:");
-      if (! d->col_repertoire_id)
+      if (! (d->col_repertoire_id || opt_existence || opt_cluster))
         fprintf(logfile, " repertoire_id");
+      if (! (d->col_sequence_id || opt_matrix || opt_cluster))
+        fprintf(logfile, " sequence_id");
       if (! (d->col_duplicate_count || opt_ignore_counts))
         fprintf(logfile, " duplicate_count");
       if (! (d->col_v_call || opt_ignore_genes))
@@ -295,7 +300,7 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 
   /* check that all required values are read and not empty */
 
-  if (! (repertoire_id && *repertoire_id))
+  if (d->col_repertoire_id && ! (repertoire_id && *repertoire_id))
     {
       fprintf(logfile,
               "\n\nError: missing or empty repertoire_id value on line: %" PRIu64 "\n",
@@ -366,6 +371,8 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
           exit(1);
         }
     }
+
+  d->total_duplicate_count += count;
 
   /* make room for another sequence */
 
@@ -491,16 +498,23 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
     }
 
   /* handle repertoire_id */
-  auto r_it = d->repertoire_id_map.find(repertoire_id);
-  if (r_it != d->repertoire_id_map.end())
+  if (repertoire_id && (*repertoire_id))
     {
-      p->repertoire_id_no = r_it->second;
+      auto r_it = d->repertoire_id_map.find(repertoire_id);
+      if (r_it != d->repertoire_id_map.end())
+        {
+          p->repertoire_id_no = r_it->second;
+        }
+      else
+        {
+          p->repertoire_id_no = d->repertoire_id_vector.size();
+          d->repertoire_id_vector.push_back(repertoire_id);
+          d->repertoire_id_map.insert({repertoire_id, p->repertoire_id_no});
+        }
     }
   else
     {
-      p->repertoire_id_no = d->repertoire_id_vector.size();
-      d->repertoire_id_vector.push_back(repertoire_id);
-      d->repertoire_id_map.insert({repertoire_id, p->repertoire_id_no});
+      p->repertoire_id_no = 0;
     }
 
   if (sequence_id && (*sequence_id))
@@ -654,18 +668,20 @@ void db_read(struct db * d, const char * filename)
   fclose(fp);
 
   fprintf(logfile,
+          "Repertoires:       %lu\n"
           "Sequences:         %" PRIu64 "\n"
           "Residues:          %" PRIu64 "\n"
           "Shortest:          %u\n"
           "Longest:           %u\n"
-          "Average length:    %4.1lf\n",
+          "Average length:    %4.1lf\n"
+          "Total dupl. count: %" PRIu64 "\n",
+          d->repertoire_id_vector.size(),
           d->sequences,
           d->residues_count,
           d->shortest,
           d->longest,
-          1.0 * d->residues_count / d->sequences);
-
-  fprintf(logfile, "Repertoires:       %lu\n", d->repertoire_id_vector.size());
+          1.0 * d->residues_count / d->sequences,
+          d->total_duplicate_count);
 
   /* add sequence pointers to index table */
 

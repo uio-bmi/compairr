@@ -48,6 +48,7 @@ static char * input2_filename;
 
 bool opt_alternative;
 bool opt_cluster;
+bool opt_existence;
 bool opt_help;
 bool opt_ignore_counts;
 bool opt_ignore_genes;
@@ -111,10 +112,22 @@ void show_time(const char * prompt)
 
 void args_show()
 {
-  fprintf(logfile, "Command (m/c):     %s\n", opt_cluster ? "Cluster" : "Overlap");
-  fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
+  if (opt_matrix)
+    fprintf(logfile, "Command (m/c/x):   Overlap (-m)\n");
+  if (opt_cluster)
+    fprintf(logfile, "Command (m/c/x):   Cluster (-c)\n");
+  if (opt_existence)
+    fprintf(logfile, "Command (m/c/x):   Existence (-x)\n");
+
+  if (opt_matrix)
+    fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
+  else
+    fprintf(logfile, "Repertoire:        %s\n", input1_filename);
   if (opt_matrix)
     fprintf(logfile, "Repertoire set 2:  %s\n", input2_filename ? input2_filename : "(same as set 1)");
+  if (opt_existence)
+    fprintf(logfile, "Repertoire set:    %s\n", input2_filename);
+
   fprintf(logfile, "Nucleotides (n):   %s\n", opt_nucleotides ? "Yes" : "No");
   fprintf(logfile, "Differences (d):   %" PRId64 "\n", opt_differences);
   fprintf(logfile, "Indels (i):        %s\n", opt_indels ? "Yes" : "No");
@@ -124,7 +137,7 @@ void args_show()
           opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
   fprintf(logfile, "Output file (o):   %s\n", opt_output);
-  if (opt_matrix)
+  if (opt_matrix || opt_existence)
     {
       fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
       fprintf(logfile, "Summands (s):      %s\n", summand_options[opt_summands_int]);
@@ -141,6 +154,7 @@ void args_usage()
   fprintf(stderr, " -h, --help                  display this help and exit\n");
   fprintf(stderr, " -v, --version               display version information\n");
   fprintf(stderr, " -m, --matrix                compute overlap matrix between two sets\n");
+  fprintf(stderr, " -x, --existence             check existence of repertoire sequences in set\n");
   fprintf(stderr, " -c, --cluster               cluster sequences in one repertoire\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
@@ -153,7 +167,7 @@ void args_usage()
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
-  fprintf(stderr, " -a, --alternative           output overlap results in column format\n");
+  fprintf(stderr, " -a, --alternative           output matrix results in column format\n");
   fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none)\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout)\n");
@@ -174,24 +188,28 @@ void args_init(int argc, char **argv)
   progname = argv[0];
   input1_filename = nullptr;
   input2_filename = nullptr;
-  opt_pairs = nullptr;
-  opt_alternative = false;
+
+  opt_help = false;
+  opt_version = false;
+  opt_matrix = false;
+  opt_existence = false;
+  opt_cluster = false;
   opt_differences = 0;
+  opt_indels = false;
   opt_ignore_counts = false;
   opt_ignore_genes = false;
-  opt_help = false;
-  opt_indels = false;
-  opt_log = nullptr;
-  opt_output = DASH_FILENAME;
-  opt_threads = 1;
-  opt_version = false;
+  opt_nucleotides = false;
   opt_summands_int = 0;
   opt_summands_string = NULL;
-  opt_nucleotides = false;
+  opt_threads = 1;
+  opt_alternative = false;
+  opt_pairs = nullptr;
+  opt_log = nullptr;
+  opt_output = DASH_FILENAME;
 
   opterr = 1;
 
-  char short_options[] = "acd:fghil:mno:p:s:t:v";
+  char short_options[] = "acd:fghil:mno:p:s:t:vx";
 
   /* unused short option letters: bejkqruwxyz */
 
@@ -212,6 +230,7 @@ void args_init(int argc, char **argv)
     {"summands",         required_argument, nullptr, 's' },
     {"threads",          required_argument, nullptr, 't' },
     {"version",          no_argument,       nullptr, 'v' },
+    {"existence",        no_argument,       nullptr, 'x' },
     {nullptr,            0,                 nullptr, 0   }
   };
 
@@ -329,6 +348,11 @@ void args_init(int argc, char **argv)
         opt_version = true;
         break;
 
+      case 'x':
+        /* existence */
+        opt_existence = true;
+        break;
+
       default:
         show_header();
         args_usage();
@@ -336,11 +360,11 @@ void args_init(int argc, char **argv)
     }
   }
 
-  int cmd_count = opt_help + opt_version + opt_matrix + opt_cluster;
+  int cmd_count = opt_help + opt_version + opt_matrix + opt_cluster + opt_existence;
   if (cmd_count == 0)
-    fatal("Please specify a command (-h, -v, -c or -m)");
+    fatal("Please specify a command (-h, -v, -c, -m or -x)");
   if (cmd_count > 1)
-    fatal("Please specify just one command (-h, -v, -c or -m)");
+    fatal("Please specify just one command (-h, -v, -c, -m or -x)");
 
   if (opt_help || opt_version)
     {
@@ -361,7 +385,19 @@ void args_init(int argc, char **argv)
         }
       else
         {
-          fatal("Incorrect number of arguments (two input files must be specified)");
+          fatal("Incorrect number of arguments. One or two input files must be specified.");
+        }
+    }
+  else if (opt_existence)
+    {
+      if (optind + 2 == argc)
+        {
+          input1_filename = argv[optind];
+          input2_filename = argv[optind + 1];
+        }
+      else
+        {
+          fatal("Incorrect number of arguments. Two input files must be specified.");
         }
     }
   else if (opt_cluster)
@@ -372,7 +408,7 @@ void args_init(int argc, char **argv)
         }
       else
         {
-          fatal("Incorrect number of arguments (one input file must be specified)");
+          fatal("Incorrect number of arguments. One input file must be specified.");
         }
     }
 
@@ -480,7 +516,7 @@ int main(int argc, char** argv)
 
   fprintf(logfile, "\n");
 
-  if (opt_matrix)
+  if (opt_matrix || opt_existence)
     overlap(input1_filename, input2_filename);
   else
     cluster(input1_filename);
