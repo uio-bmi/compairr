@@ -160,7 +160,14 @@ void find_variant_matches(uint64_t seed,
 
                   uint64_t s = compute_summand(f, g);
 
-                  repertoire_matrix[set2_repertoires * i + j] += s;
+                  if (opt_matrix)
+                    {
+                      repertoire_matrix[set2_repertoires * i + j] += s;
+                    }
+                  else
+                    {
+                      repertoire_matrix[set2_repertoires * seed + j] += s;
+                    }
 
                   all_matches++;
 
@@ -341,11 +348,23 @@ void sim_thread(int64_t t)
   if (opt_threads > 1)
     {
       /* if multiple threads, create local matrix */
-      repertoire_matrix_local = static_cast<uint64_t *>
-        (xmalloc(set1_repertoires * set2_repertoires * sizeof(uint64_t)));
 
-      for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
-        repertoire_matrix_local[k] = 0;
+      if (opt_matrix)
+        {
+          repertoire_matrix_local = static_cast<uint64_t *>
+            (xmalloc(set1_repertoires * set2_repertoires * sizeof(uint64_t)));
+
+          for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+            repertoire_matrix_local[k] = 0;
+        }
+      else
+        {
+          repertoire_matrix_local = static_cast<uint64_t *>
+            (xmalloc(set1_sequences * set2_repertoires * sizeof(uint64_t)));
+
+          for(uint64_t k = 0; k < set1_sequences * set2_repertoires; k++)
+            repertoire_matrix_local[k] = 0;
+        }
 
       pthread_mutex_lock(&network_mutex);
     }
@@ -401,14 +420,11 @@ void sim_thread(int64_t t)
               uint64_t a = pairs_list[i].seq[0];
               uint64_t b = pairs_list[i].seq[1];
 
-              const char * rep_id1 = empty_string;
-              uint64_t rep_id_no1 = db_get_repertoire_id_no(d1, a);
-              if (opt_matrix)
-                rep_id1 = db_get_repertoire_id(d1, rep_id_no1);
+              int rep_id_no1 = db_get_repertoire_id_no(d1, a);
+              const char * rep_id1 = db_get_repertoire_id(d1, rep_id_no1);
 
-              const char * rep_id2 = empty_string;
-              uint64_t rep_id_no2 = db_get_repertoire_id_no(d2, b);
-              // rep_id2 = db_get_repertoire_id(d2, rep_id_no2);
+              int rep_id_no2 = db_get_repertoire_id_no(d2, b);
+              const char * rep_id2 = db_get_repertoire_id(d2, rep_id_no2);
 
               fprintf(pairsfile,
                       "%s\t%s\t%" PRIu64 "\t%s\t%s\t",
@@ -435,8 +451,16 @@ void sim_thread(int64_t t)
   if (opt_threads > 1)
     {
       /* update global repertoire_matrix */
-      for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
-        repertoire_matrix[k] += repertoire_matrix_local[k];
+      if (opt_matrix)
+        {
+          for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+            repertoire_matrix[k] += repertoire_matrix_local[k];
+        }
+      else
+        {
+          for(uint64_t k = 0; k < set1_sequences * set2_repertoires; k++)
+            repertoire_matrix[k] += repertoire_matrix_local[k];
+        }
 
       pthread_mutex_unlock(&network_mutex);
 
@@ -462,13 +486,10 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /**** Set 1 ****/
 
-  if (opt_matrix)
-    fprintf(logfile, "Immune receptor repertoire set 1\n\n");
-  else
-    fprintf(logfile, "Immune receptor reference repertoire\n\n");
+  fprintf(logfile, "Immune receptor repertoire set 1\n\n");
 
   d1 = db_create();
-  db_read(d1, set1_filename);
+  db_read(d1, set1_filename, opt_matrix, opt_existence);
 
   set1_longestsequence = db_getlongestsequence(d1);
   set1_sequences = db_getsequencecount(d1);
@@ -476,6 +497,9 @@ void overlap(char * set1_filename, char * set2_filename)
   set1_residues = db_getresiduescount(d1);
 
   fprintf(logfile, "\n");
+
+  uint64_t sum_size = 0;
+  uint64_t sum_count = 0;
 
   /* determine number of sequences in each of the repertoires (Set 1) */
 
@@ -507,8 +531,8 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /* list of repertoires in set 1 */
 
-  uint64_t sum_size = 0;
-  uint64_t sum_count = 0;
+  sum_size = 0;
+  sum_count = 0;
   for (unsigned int i = 0; i < set1_repertoires; i++)
     {
       unsigned int s = set1_lookup_repertoire[i];
@@ -516,54 +540,47 @@ void overlap(char * set1_filename, char * set2_filename)
       sum_count += set1_repertoire_count[s];
     }
 
-  int w1 = MAX(3, 1 + floor(log10(set1_repertoires)));
+  int w1 = MAX(1, 1 + floor(log10(set1_repertoires)));
   int w2 = MAX(9, 1 + floor(log10(sum_size)));
   int w3 = MAX(5, 1 + floor(log10(sum_count)));
 
-  if (opt_matrix)
+  fprintf(logfile, "Repertoires in set:\n");
+  fprintf(logfile, "%*s %*s %*s %s\n",
+          w1, "#",
+          w2, "Sequences",
+          w3, "Count",
+          "Repertoire ID");
+  for (unsigned int i = 0; i < set1_repertoires; i++)
     {
-      fprintf(logfile, "Repertoires in set:\n");
-      fprintf(logfile, "%*s %*s %*s %s\n",
-              w1, "#",
-              w2, "Sequences",
-              w3, "Count",
-              "Repertoire ID");
-      for (unsigned int i = 0; i < set1_repertoires; i++)
-        {
-          unsigned int s = set1_lookup_repertoire[i];
-          fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
-                  w1, i+1,
-                  w2, set1_repertoire_size[s],
-                  w3, set1_repertoire_count[s],
-                  db_get_repertoire_id(d1, s));
-        }
-#if 0
-      fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n",
-              w1, "Sum",
-              w2, sum_size,
-              w3, sum_count);
-#endif
-      fprintf(logfile, "\n");
+      unsigned int s = set1_lookup_repertoire[i];
+      fprintf(logfile, "%*u %*" PRIu64 " %*" PRIu64 " %s\n",
+              w1, i+1,
+              w2, set1_repertoire_size[s],
+              w3, set1_repertoire_count[s],
+              db_get_repertoire_id(d1, s));
     }
-  else
+#if 0
+  fprintf(logfile, "%-*s %*" PRIu64 " %*" PRIu64 "\n",
+          w1, "Sum",
+          w2, sum_size,
+          w3, sum_count);
+#endif
+  fprintf(logfile, "\n");
+
+  if (opt_existence)
     {
       if (set1_repertoires > 1)
         fatal("Multiple repertoires are not allowed in the first file specified on the command line with the -x or --existence command.");
     }
 
-
-
   /**** Set 2 ****/
 
-  if (opt_matrix)
-    fprintf(logfile, "Immune receptor repertoire set 2\n\n");
-  else
-    fprintf(logfile, "Immune receptor repertoire set\n\n");
+  fprintf(logfile, "Immune receptor repertoire set 2\n\n");
 
   if (set2_filename && strcmp(set1_filename, set2_filename))
     {
       d2 = db_create();
-      db_read(d2, set2_filename);
+      db_read(d2, set2_filename, true, false);
 
       set2_longestsequence = db_getlongestsequence(d2);
       set2_sequences = db_getsequencecount(d2);
@@ -611,10 +628,10 @@ void overlap(char * set1_filename, char * set2_filename)
           sum_count += set2_repertoire_count[s];
         }
 
-      int w1 = MAX(3, 1 + floor(log10(set2_repertoires)));
+      int w1 = MAX(1, 1 + floor(log10(set2_repertoires)));
       int w2 = MAX(9, 1 + floor(log10(sum_size)));
       int w3 = MAX(5, 1 + floor(log10(sum_count)));
-      
+
       if (set2_repertoires > 0)
         {
           fprintf(logfile, "Repertoires in set:\n");
@@ -649,11 +666,6 @@ void overlap(char * set1_filename, char * set2_filename)
     {
       /* set2 = set1 */
 
-      if (set2_repertoires == 0)
-        {
-          fatal("Repertoire set is missing repertoire_id.");
-        }
-      
       d2 = d1;
 
       fprintf(logfile, "Set 2 is identical to set 1\n");
@@ -667,8 +679,12 @@ void overlap(char * set1_filename, char * set2_filename)
       set2_repertoire_size = set1_repertoire_size;
       set2_repertoire_count = set1_repertoire_count;
       set2_lookup_repertoire = set1_lookup_repertoire;
-    }
 
+      if (set2_repertoires == 0)
+        {
+          fatal("Repertoire set is missing repertoire_id.");
+        }
+    }
 
   unsigned int overall_longest = MAX(set1_longestsequence,
                                      set2_longestsequence);
@@ -703,14 +719,28 @@ void overlap(char * set1_filename, char * set2_filename)
     }
   progress_done();
 
-  /* allocate matrix of repertoire1 x repertoire2 counts */
+  if (opt_matrix)
+    {
+      /* allocate matrix of repertoire set 1 x repertoire set 2 counts */
 
-  repertoire_matrix = static_cast<uint64_t *>
-    (xmalloc(sizeof(uint64_t) * set1_repertoires * set2_repertoires));
+      repertoire_matrix = static_cast<uint64_t *>
+        (xmalloc(sizeof(uint64_t) * set1_repertoires * set2_repertoires));
 
-  for(unsigned int s = 0; s < set1_repertoires; s++)
-    for(unsigned int t = 0; t < set2_repertoires; t++)
-      repertoire_matrix[set2_repertoires * s + t] = 0;
+      for(unsigned int s = 0; s < set1_repertoires; s++)
+        for(unsigned int t = 0; t < set2_repertoires; t++)
+          repertoire_matrix[set2_repertoires * s + t] = 0;
+    }
+  else
+    {
+      /* allocate matrix of set 1 sequences x repertoire set 2 counts */
+
+      repertoire_matrix = static_cast<uint64_t *>
+        (xmalloc(sizeof(uint64_t) * set1_sequences * set2_repertoires));
+
+      for(unsigned int s = 0; s < set1_sequences; s++)
+        for(unsigned int t = 0; t < set2_repertoires; t++)
+          repertoire_matrix[set2_repertoires * s + t] = 0;
+    }
 
   /* compare all sequences */
 
@@ -752,46 +782,94 @@ void overlap(char * set1_filename, char * set2_filename)
   /* dump similarity matrix */
 
   unsigned int x = 0;
-  progress_init("Writing results:  ", set1_sequences * set2_sequences);
   if (opt_alternative)
     {
-      fprintf(outfile, "#repertoire_id_1\trepertoire_id_2\tmatches\n");
-      for (unsigned int i = 0; i < set1_repertoires; i++)
+      if (opt_matrix)
         {
-          unsigned int s = set1_lookup_repertoire[i];
-          for (unsigned int j = 0; j < set2_repertoires; j++)
+          progress_init("Writing results:  ", set1_repertoires * set2_repertoires);
+          fprintf(outfile, "#repertoire_id_1\trepertoire_id_2\tmatches\n");
+          for (unsigned int i = 0; i < set1_repertoires; i++)
             {
-              unsigned int t = set2_lookup_repertoire[j];
-              fprintf(outfile,
-                      "%s\t%s\t%" PRIu64 "\n",
-                      db_get_repertoire_id(d1, s),
-                      db_get_repertoire_id(d2, t),
-                      repertoire_matrix[set2_repertoires * s + t]);
-              x++;
+              unsigned int s = set1_lookup_repertoire[i];
+              for (unsigned int j = 0; j < set2_repertoires; j++)
+                {
+                  unsigned int t = set2_lookup_repertoire[j];
+                  fprintf(outfile,
+                          "%s\t%s\t%" PRIu64 "\n",
+                          db_get_repertoire_id(d1, s),
+                          db_get_repertoire_id(d2, t),
+                          repertoire_matrix[set2_repertoires * s + t]);
+                  x++;
+                }
             }
+          progress_done();
+        }
+      else
+        {
+          progress_init("Writing results:  ", set1_sequences * set2_repertoires);
+          fprintf(outfile, "#sequence_id_1\trepertoire_id_2\tmatches\n");
+          for (unsigned int i = 0; i < set1_sequences; i++)
+            {
+              for (unsigned int j = 0; j < set2_repertoires; j++)
+                {
+                  unsigned int t = set2_lookup_repertoire[j];
+                  fprintf(outfile,
+                          "%s\t%s\t%" PRIu64 "\n",
+                          db_get_sequence_id(d1, i),
+                          db_get_repertoire_id(d2, t),
+                          repertoire_matrix[set2_repertoires * i + t]);
+                  x++;
+                }
+            }
+          progress_done();
         }
     }
   else
     {
-      fprintf(outfile, "#");
-      for (unsigned int j = 0; j < set2_repertoires; j++)
-        fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
-      fprintf(outfile, "\n");
-      for (unsigned int i = 0; i < set1_repertoires; i++)
+      if (opt_matrix)
         {
-          unsigned int s = set1_lookup_repertoire[i];
-          fprintf(outfile, "%s", db_get_repertoire_id(d1, s));
+          progress_init("Writing results:  ", set1_repertoires * set2_repertoires);
+          fprintf(outfile, "#");
           for (unsigned int j = 0; j < set2_repertoires; j++)
-            {
-              unsigned int t = set2_lookup_repertoire[j];
-              fprintf(outfile, "\t%" PRIu64, repertoire_matrix[set2_repertoires * s + t]);
-              x++;
-              progress_update(x);
-            }
+            fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
           fprintf(outfile, "\n");
+          for (unsigned int i = 0; i < set1_repertoires; i++)
+            {
+              unsigned int s = set1_lookup_repertoire[i];
+              fprintf(outfile, "%s", db_get_repertoire_id(d1, s));
+              for (unsigned int j = 0; j < set2_repertoires; j++)
+                {
+                  unsigned int t = set2_lookup_repertoire[j];
+                  fprintf(outfile, "\t%" PRIu64, repertoire_matrix[set2_repertoires * s + t]);
+                  x++;
+                  progress_update(x);
+                }
+              fprintf(outfile, "\n");
+            }
+          progress_done();
+        }
+      else
+        {
+          progress_init("Writing results:  ", set1_sequences * set2_repertoires);
+          fprintf(outfile, "#");
+          for (unsigned int j = 0; j < set2_repertoires; j++)
+            fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
+          fprintf(outfile, "\n");
+          for (unsigned int i = 0; i < set1_sequences; i++)
+            {
+              fprintf(outfile, "%s", db_get_sequence_id(d1, i));
+              for (unsigned int j = 0; j < set2_repertoires; j++)
+                {
+                  unsigned int t = set2_lookup_repertoire[j];
+                  fprintf(outfile, "\t%" PRIu64, repertoire_matrix[set2_repertoires * i + t]);
+                  x++;
+                  progress_update(x);
+                }
+              fprintf(outfile, "\n");
+            }
+          progress_done();
         }
     }
-  progress_done();
 
   fprintf(logfile, "\n");
 

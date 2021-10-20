@@ -99,6 +99,7 @@ struct db
   uint64_t residues_alloc;
   uint64_t residues_count;
   uint64_t total_duplicate_count;
+  uint64_t repertoire_count;
   std::vector<std::string> repertoire_id_vector;
   std::map<std::string, int> repertoire_id_map;
   int col_junction;
@@ -134,19 +135,6 @@ void db_exit()
   j_gene_map.clear();
 }
 
-int compare_byrepertoire_id(const void * a, const void * b)
-{
-  const seqinfo_s * x = (const seqinfo_s *) a;
-  const seqinfo_s * y = (const seqinfo_s *) b;
-
-  if (x->repertoire_id_no < y->repertoire_id_no)
-    return -1;
-  else if (x->repertoire_id_no > y->repertoire_id_no)
-    return +1;
-  else
-    return 0;
-}
-
 struct db * db_create()
 {
   struct db * d = new db;
@@ -160,6 +148,7 @@ struct db * db_create()
   d->residues_alloc = 0;
   d->residues_count = 0;
   d->total_duplicate_count = 0;
+  d->repertoire_count = 0;
   d->repertoire_id_vector.clear();
   d->repertoire_id_map.clear();
   d->col_junction = 0;
@@ -173,7 +162,10 @@ struct db * db_create()
   return d;
 }
 
-void parse_airr_tsv_header(char * line, struct db * d)
+void parse_airr_tsv_header(char * line,
+                           struct db * d,
+                           bool require_repertoire_id,
+                           bool require_sequence_id)
 {
   char delim[] = "\t";
   char * string = line;
@@ -183,13 +175,13 @@ void parse_airr_tsv_header(char * line, struct db * d)
 
   while ((token = strsep(& string, delim)) != nullptr)
     {
-      if (strcmp(token, "junction_aa") == 0)
+      if (strcmp(token, "repertoire_id") == 0)
         {
-          d->col_junction_aa = i;
+          d->col_repertoire_id = i;
         }
-      else if (strcmp(token, "junction") == 0)
+      else if (strcmp(token, "sequence_id") == 0)
         {
-          d->col_junction = i;
+          d->col_sequence_id = i;
         }
       else if (strcmp(token, "duplicate_count") == 0)
         {
@@ -203,47 +195,43 @@ void parse_airr_tsv_header(char * line, struct db * d)
         {
           d->col_j_call = i;
         }
-      else if (strcmp(token, "repertoire_id") == 0)
+      else if (strcmp(token, "junction") == 0)
         {
-          d->col_repertoire_id = i;
+          d->col_junction = i;
         }
-      else if (strcmp(token, "sequence_id") == 0)
+      else if (strcmp(token, "junction_aa") == 0)
         {
-          d->col_sequence_id = i;
+          d->col_junction_aa = i;
         }
       i++;
     }
 
-  if (! (opt_existence || opt_cluster || d->col_repertoire_id) ||
-      ! (opt_matrix || opt_cluster || d->col_sequence_id) ||
-      ! (opt_nucleotides || d->col_junction_aa) ||
-      ! ((!opt_nucleotides) || d->col_junction) ||
-      ! (opt_ignore_counts || d->col_duplicate_count) ||
-      ! (opt_ignore_genes || d->col_v_call) ||
-      ! (opt_ignore_genes || d->col_j_call))
+  if (! (d->col_repertoire_id   || ! require_repertoire_id) ||
+      ! (d->col_sequence_id     || ! require_sequence_id)   ||
+      ! (d->col_duplicate_count ||   opt_ignore_counts)     ||
+      ! (d->col_v_call          ||   opt_ignore_genes)      ||
+      ! (d->col_j_call          ||   opt_ignore_genes)      ||
+      ! (d->col_junction        || ! opt_nucleotides)       ||
+      ! (d->col_junction_aa     ||   opt_nucleotides))
     {
       fprintf(logfile,
         "\nMissing essential column(s) in header of AIRR TSV input file:");
-      if (! (d->col_repertoire_id || opt_existence || opt_cluster))
+
+      if (! (d->col_repertoire_id   || ! require_repertoire_id))
         fprintf(logfile, " repertoire_id");
-      if (! (d->col_sequence_id || opt_matrix || opt_cluster))
+      if (! (d->col_sequence_id     || ! require_sequence_id))
         fprintf(logfile, " sequence_id");
       if (! (d->col_duplicate_count || opt_ignore_counts))
         fprintf(logfile, " duplicate_count");
-      if (! (d->col_v_call || opt_ignore_genes))
+      if (! (d->col_v_call          || opt_ignore_genes))
         fprintf(logfile, " v_call");
-      if (! (d->col_j_call || opt_ignore_genes))
+      if (! (d->col_j_call          || opt_ignore_genes))
         fprintf(logfile, " j_call");
-      if (opt_nucleotides)
-        {
-          if (! d->col_junction)
-            fprintf(logfile, " junction");
-        }
-      else
-        {
-          if (! d->col_junction_aa)
-            fprintf(logfile, " junction_aa");
-        }
+      if (! (d->col_junction        || ! opt_nucleotides))
+        fprintf(logfile, " junction");
+      if (! (d->col_junction_aa     || opt_nucleotides))
+        fprintf(logfile, " junction_aa");
+
       fprintf(logfile, "\n");
       exit(1);
     }
@@ -251,13 +239,13 @@ void parse_airr_tsv_header(char * line, struct db * d)
 
 void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
 {
-  char * junction = nullptr;
-  char * junction_aa = nullptr;
+  char * repertoire_id = nullptr;
+  char * sequence_id = nullptr;
   char * duplicate_count = nullptr;
   char * v_call = nullptr;
   char * j_call = nullptr;
-  char * repertoire_id = nullptr;
-  char * sequence_id = nullptr;
+  char * junction = nullptr;
+  char * junction_aa = nullptr;
 
   char delim[] = "\t";
   char * string = line;
@@ -303,71 +291,76 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
   if (d->col_repertoire_id && ! (repertoire_id && *repertoire_id))
     {
       fprintf(logfile,
-              "\n\nError: missing or empty repertoire_id value on line: %" PRIu64 "\n",
+              "\n\nError: missing or empty repertoire_id value on line: %"
+              PRIu64 "\n",
               lineno);
       exit(1);
     }
 
-  if (opt_nucleotides)
+  if (d->col_sequence_id && ! (sequence_id && *sequence_id))
     {
-      if (! (junction && *junction))
-        {
-          fprintf(logfile,
-                  "\n\nError: missing or empty junction value on line: %" PRIu64 "\n",
-                  lineno);
-          exit(1);
-        }
-    }
-  else
-    {
-      if (! (junction_aa && *junction_aa))
-        {
-          fprintf(logfile,
-                  "\n\nError: missing or empty junction_aa value on line: %" PRIu64 "\n",
-                  lineno);
-          exit(1);
-        }
+      fprintf(logfile,
+              "\n\nError: missing or empty sequence_id value on line: %"
+              PRIu64 "\n",
+              lineno);
+      exit(1);
     }
 
-  if (! opt_ignore_genes)
+  if (d->col_duplicate_count && ! (duplicate_count && *duplicate_count))
     {
-      if (! (v_call && *v_call))
-        {
-          fprintf(logfile,
-                  "\n\nError: missing or empty v_call value on line: %" PRIu64 "\n",
-                  lineno);
-          exit(1);
-        }
-      if (! (j_call && *j_call))
-        {
-          fprintf(logfile,
-                  "\n\nError: missing or empty j_call value on line: %" PRIu64 "\n",
-                  lineno);
-          exit(1);
-        }
+      fprintf(logfile,
+              "\n\nError: missing or empty duplicate_count on line: %"
+              PRIu64 "\n",
+              lineno);
+      exit(1);
+    }
+
+  if (d->col_v_call && ! (v_call && *v_call))
+    {
+      fprintf(logfile,
+              "\n\nError: missing or empty v_call value on line: %"
+              PRIu64 "\n",
+              lineno);
+      exit(1);
+    }
+
+  if (d->col_j_call && ! (j_call && *j_call))
+    {
+      fprintf(logfile,
+              "\n\nError: missing or empty j_call value on line: %"
+              PRIu64 "\n",
+              lineno);
+      exit(1);
+    }
+
+  if (d->col_junction && ! (junction && *junction))
+    {
+      fprintf(logfile,
+              "\n\nError: missing or empty junction value on line: %"
+              PRIu64 "\n",
+              lineno);
+      exit(1);
+    }
+
+  if (d->col_junction_aa && ! (junction_aa && *junction_aa))
+    {
+      fprintf(logfile,
+              "\n\nError: missing or empty junction_aa value on line: %"
+              PRIu64 "\n",
+              lineno);
+      exit(1);
     }
 
   long count = 1;
 
-  if (! opt_ignore_counts)
+  if (d->col_duplicate_count)
     {
-      if (duplicate_count && *duplicate_count)
+      char * endptr;
+      count = strtol(duplicate_count, &endptr, 10);
+      if ((endptr == nullptr) || (*endptr) || (count < 1))
         {
-          char * endptr;
-          count = strtol(duplicate_count, &endptr, 10);
-          if ((endptr == nullptr) || (*endptr) || (count < 1))
-            {
-              fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
-                      PRIu64 ": %s\n", lineno, duplicate_count);
-              exit(1);
-            }
-        }
-      else
-        {
-          fprintf(logfile,
-                  "\n\nError: missing or empty duplicate_count on line: %"
-                  PRIu64 "\n",
-                  lineno);
+          fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
+                  PRIu64 ": %s\n", lineno, duplicate_count);
           exit(1);
         }
     }
@@ -539,7 +532,10 @@ void parse_airr_tsv_line(char * line, uint64_t lineno, struct db * d)
   d->residues_count += seqlen;
 }
 
-void db_read(struct db * d, const char * filename)
+void db_read(struct db * d,
+             const char * filename,
+             bool require_repertoire_id,
+             bool require_sequence_id)
 {
   FILE * fp = nullptr;
   if (filename)
@@ -619,7 +615,10 @@ void db_read(struct db * d, const char * filename)
             }
           else
             {
-              parse_airr_tsv_header(line, d);
+              parse_airr_tsv_header(line,
+                                    d,
+                                    require_repertoire_id,
+                                    require_sequence_id);
               state = 1;
             }
         }
@@ -667,15 +666,26 @@ void db_read(struct db * d, const char * filename)
 
   fclose(fp);
 
+  d->repertoire_count = d->repertoire_id_vector.size();
+
+  /* if repertoire_id is not used, insert empty string as ID of first */
+
+  if (d->repertoire_count == 0)
+    {
+      d->repertoire_id_vector.push_back("");
+      d->repertoire_id_map.insert({"", 0});
+      d->repertoire_count = 1;
+    }
+
   fprintf(logfile,
-          "Repertoires:       %lu\n"
+          "Repertoires:       %" PRIu64 "\n"
           "Sequences:         %" PRIu64 "\n"
           "Residues:          %" PRIu64 "\n"
           "Shortest:          %u\n"
           "Longest:           %u\n"
           "Average length:    %4.1lf\n"
           "Total dupl. count: %" PRIu64 "\n",
-          d->repertoire_id_vector.size(),
+          d->repertoire_count,
           d->sequences,
           d->residues_count,
           d->shortest,
@@ -694,12 +704,6 @@ void db_read(struct db * d, const char * filename)
       r += p->seqlen;
       progress_update(i+1);
     }
-  progress_done();
-
-  /* sort sequences by repertoire_id */
-
-  progress_init("Sorting:          ", 1);
-  qsort(d->seqindex, d->sequences, sizeof(seqinfo_s), compare_byrepertoire_id);
   progress_done();
 }
 
@@ -746,7 +750,7 @@ unsigned int db_getlongestsequence(struct db * d)
 
 uint64_t db_get_repertoire_count(struct db * d)
 {
-  return d->repertoire_id_vector.size();
+  return d->repertoire_count;
 }
 
 uint64_t db_gethash(struct db * d, uint64_t seqno)
@@ -779,12 +783,12 @@ uint64_t db_get_count(struct db * d, uint64_t seqno)
   return d->seqindex[seqno].count;
 }
 
-uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno)
+int db_get_repertoire_id_no(struct db * d, uint64_t seqno)
 {
   return d->seqindex[seqno].repertoire_id_no;
 }
 
-const char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no)
+const char * db_get_repertoire_id(struct db * d, int repertoire_id_no)
 {
   return d->repertoire_id_vector[repertoire_id_no].c_str();
 }

@@ -35,7 +35,10 @@ struct db * db_create();
 
 void db_free(struct db * d);
 
-void db_read(struct db * d, const char * filename);
+void db_read(struct db * d,
+             const char * filename,
+             bool require_repertoire_id,
+             bool require_sequence_id);
 
 uint64_t db_getsequencecount(struct db * d);
 
@@ -57,9 +60,9 @@ uint64_t db_get_j_gene(struct db * d, uint64_t seqno);
 
 uint64_t db_get_count(struct db * d, uint64_t seqno);
 
-uint64_t db_get_repertoire_id_no(struct db * d, uint64_t seqno);
+int db_get_repertoire_id_no(struct db * d, uint64_t seqno);
 
-const char * db_get_repertoire_id(struct db * d, uint64_t repertoire_id_no);
+const char * db_get_repertoire_id(struct db * d, int repertoire_id_no);
 
 char * db_get_sequence_id(struct db * d, uint64_t seqno);
 
