@@ -3,8 +3,13 @@
 # CompAIRR
 
 CompAIRR (`compairr`) is a command line tool to compare two sets of
-adaptive immune receptor repertoires, or cluster the sequences in one
-repertoire.
+adaptive immune receptor repertoires and compute their overlap. It can
+also identify which sequences are present in which repertoires.
+Furthermore, CompAIRR can cluster the sequences in a repertoire
+set. Sequence comparisons can be exact or inexact, allowing 0-2
+substitutions and an indel, if desired. CompAIRR has been shown to be
+very fast and to have a small memory footprint compared to similar
+tools.
 
 
 ## Installation
@@ -39,6 +44,10 @@ Use the `-h` or `--help` option to show some help information.
 
 Run the program with `-v` or `--version` for version information.
 
+The type of operation that should be performed is specified with one
+of the options `-m`, `-x` or `-c` (or the corresponding long option
+forms `--matrix`, `--existence`, or `--cluster`).
+
 The code is multi-threaded. The number of threads may be specified
 with the `-t` or `--threads` option.
 
@@ -50,6 +59,9 @@ information to standard error (stderr) unless a log file has been
 specified with the `-l` or `--log` option. Error messages and warnings
 will also be written here.
 
+The default is to compare amino acid sequences, but nucleotide
+sequences are compared if the `-n` or `--nucleotides` option is given.
+
 The user can specify whether 0, 1 or 2 differences are allowed when
 comparing sequences, using the option `-d` or `--differences`. To allow
 indels (insertions or deletions) the option `-i` or `--indels` may be
@@ -58,9 +70,6 @@ differences are allowed. The `-i` option is allowed only when d=1.
 
 The V and J gene alleles specified for each sequence must also match,
 unless the `-g` or `--ignore-genes` option is in effect.
-
-The default is to compare amino acid sequences, but nucleotide
-sequences are compared if the `-n` or `--nucleotides` option is given.
 
 
 ## Computing overlap between two repertoire sets
@@ -72,7 +81,7 @@ For each of the two repertoire sets there must an input file of
 tab-separated values formatted according to [the AIRR standard for
 rearrangements](https://docs.airr-community.org/en/stable/datarep/rearrangements.html).
 The two input files are specified on the command line without any
-preceeding option letter. If only one filename is specified on the
+preceding option letter. If only one filename is specified on the
 command line, or the same filename is specified twice, it is assumed
 that the set should be compared to itself. Each file must contain the
 repertoire ID and either the nucleotide or the amino acid sequence of
@@ -123,6 +132,34 @@ of little use in this case. The order of the lines in the file is
 unspecified.
 
 
+## Analysing in which repertoires a set of sequences are present
+
+Use the option `-x` or `--existence` to analyse in which repertoires a
+set of sequences are present.
+
+Two input files with repertoire sets in standard format must be
+specified on the command line. The first file should contain the
+different sequences to analyse. The `sequence_id` column must be
+present in this file. If the optional `repertoire_id` column is
+present, all the identifiers must be identical. The second file must
+contain the different repertoires. The `repertoire_id` column must be
+present in the second file.
+
+CompAIRR will identify in which repertoires each sequence is present
+and will output the results either as a matrix or as a three-column
+table (if the `-a` option is specified). The options `-d`, `-i`, `-g`,
+and `-n` (and the corresponding long option names `--differences`,
+`--indels`, `--ignore-genes`, and `--nucleotides`) will be taken into
+account when comparing sequences.
+
+The output will be in a similar format as when computing the overlap
+(above), but the first column will contain the `sequence_id` from the
+first file instead of the `repertoire_id`.
+
+The `-p` or `--pairs` option may be specified to output all pairs of
+matching sequences in the same way as for the overlap computation.
+
+
 ## Clustering the sequences in a repertoire
 
 To cluster the sequences in one repertoire, use the `-c` or
@@ -133,12 +170,14 @@ command line.
 
 The tool will cluster the sequences using single linkage hierarchical
 clustering, according to the specified distance and indel options
-(`-d`, `--distance`, `-i`, `--indels`). The V and J gene alleles will be
-taken into account unless the `-g` or `--ignore-genes` option is
-specified.
+(`-d`, `--distance`, `-i`, `--indels`). The V and J gene alleles will
+be taken into account unless the `-g` or `--ignore-genes` option is
+specified. The options `-n` or `--nucleotides` indicate that the
+comparison should be performed with nucleotide sequences, not amino
+acid sequences.
 
 The output will be in a similar TSV format as the input file, but
-preceeded with two additional columns. The first column will contain a
+preceded with two additional columns. The first column will contain a
 cluster number, starting at 1. The second column will contain the size
 of the cluster. The subsequent columns are `repertoire_id`,
 `sequence_id`, `duplicate_count`, `v_call`, `j_call`, and `junction`
@@ -158,16 +197,13 @@ documentation](https://docs.airr-community.org/en/stable/).
 The first line must contain the header. The rest of the file must
 contain one line per sequence. The following fields should be included:
 
-* `repertoire_id`: identifier of the repertoire (required)
-* `sequence_id`: identifier of the sequence (optional)
+* `repertoire_id`: identifier of the repertoire (required except for first file when using `-x` or `--existence`)
+* `sequence_id`: identifier of the sequence (optional except for for first file when using `-x` or `--existence`)
 * `duplicate_count`: number of identical copies of the same rearrangement (required unless `-f` option given)
 * `v_call`: V gene name with allele (required unless `-g` option given)
 * `j_call`: J gene name with allele (required unless `-g` option given)
 * `junction`: nucleotide sequence (required if `-n` option given)
 * `junction_aa`: amino acid sequence (single letter code) (required unless `-n` option given)
-
-The `sequence_id` field is not required, but if given it will optionally
-be reported in the file specified with the `-p` or `--pairs` option.
 
 See below for an example. Other fields may be included, but will be
 ignored.
@@ -185,6 +221,7 @@ Commands:
  -h, --help                  display this help and exit
  -v, --version               display version information
  -m, --matrix                compute overlap matrix between two sets
+ -x, --existence             check existence of repertoire sequences in set
  -c, --cluster               cluster sequences in one repertoire
 
 General options:
@@ -197,7 +234,7 @@ General options:
  -t, --threads INTEGER       number of threads to use (1)
 
 Input/output options:
- -a, --alternative           output overlap results in column format
+ -a, --alternative           output results in three-column format, not matrix
  -p, --pairs FILENAME        output matching pairs to file (none)
  -l, --log FILENAME          log to file (stderr)
  -o, --output FILENAME       output results to file (stdout)
@@ -205,6 +242,8 @@ Input/output options:
 
 
 ## Example - Repertoire overlap
+
+In this example we will compute the overlap of two repertoire sets.
 
 Let's use two simple input files. The first is `seta.tsv`:
 
@@ -234,7 +273,7 @@ Here is the output to the console:
 CompAIRR 1.3.2 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
-Start time:        Wed Oct 13 17:06:11 CEST 2021
+Start time:        Wed Oct 27 16:38:05 CEST 2021
 Command (m/c):     Overlap
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
@@ -253,38 +292,36 @@ Log file (l):      (stderr)
 Immune receptor repertoire set 1
 
 Reading sequences: 100% (0s)
+Repertoires:       2
 Sequences:         2
 Residues:          25
 Shortest:          11
 Longest:           14
 Average length:    12.5
-Repertoires:       2
+Total dupl. count: 4
 Indexing:          100% (0s)
-Sorting:           100% (0s)
 
-Repertoires:
-  # Sequences Count Repertoire ID
-  1         1     1 A1
-  2         1     3 A2
-Sum         2     4
+Repertoires in set:
+# Sequences Count Repertoire ID
+1         1     1 A1
+2         1     3 A2
 
 Immune receptor repertoire set 2
 
 Reading sequences: 100% (0s)
+Repertoires:       2
 Sequences:         3
 Residues:          39
 Shortest:          11
 Longest:           14
 Average length:    13.0
-Repertoires:       2
+Total dupl. count: 22
 Indexing:          100% (0s)
-Sorting:           100% (0s)
 
-Repertoires:
-  # Sequences Count Repertoire ID
-  1         2    15 B1
-  2         1     7 B2
-Sum         3    22
+Repertoires in set:
+# Sequences Count Repertoire ID
+1         2    15 B1
+2         1     7 B2
 
 Unique V genes:    2
 Unique J genes:    2
@@ -294,7 +331,7 @@ Hashing sequences: 100% (0s)
 Analysing:         100% (0s)
 Writing results:   100% (0s)
 
-End time:          Wed Oct 13 17:06:11 CEST 2021
+End time:          Wed Oct 27 16:38:05 CEST 2021
 ```
 
 Repertoires will be sorted alphabetically by ID. The program gives some
@@ -310,7 +347,7 @@ A2	45	0
 
 And here is the result in the `pairs.tsv` file:
 
-```
+```tsv
 #repertoire_id_1	sequence_id_1	duplicate_count_1	v_call_1	j_call_1	junction_aa_1	repertoire_id_2	sequence_id_2	duplicate_count_2	v_call_2	j_call_2	junction_aa_2
 A1	R	1	TCRBV07-06	TCRBJ02-01	CASSTSHEQYF	B2	V	7	TCRBV07-06	TCRBJ02-01	CASSTSHQQYF
 A2	S	3	TCRBV07-09	TCRBJ01-02	CASSLRVGGYGYTF	B1	T	5	TCRBV07-09	TCRBJ01-02	CASSLRVGGYGYTF
@@ -349,6 +386,186 @@ looking them up in the Bloom filter and then, if there was a match, in
 the hash table. To find matches with 1 or 2 substitutions or indels,
 the hashes of all these variants sequences are generated and looked
 up.
+
+
+## Example - Sequence existence
+
+In this example we will use the `-x` or `--existence` option to find
+out in which repertoires a set of sequences are present.
+
+The file `setc.tsv` contains the sequences that we will analyse:
+
+```tsv
+repertoire_id	sequence_id	duplicate_count	v_call	j_call	junction	junction_aa	sequence	rev_comp	productive	d_call	sequence_alignment	germline_alignment	v_cigar	d_cigar	j_cigar
+C	X	1	TCRBV07-09	TCRBJ01-02	tgcgcgagcagcctgcgcgtgggcggctttggctataccttt	CASSLRVGGFGYTF									
+C	Y	1	TCRBV07-06	TCRBJ02-01	tgcgcgagcagcaccagccatcagcagtatttt	CASSTSHQQYF									
+```
+
+The file above is included in the folder `test` in the distribution.
+
+We will compare it to repertoire sets in the file `setb.tsv` described
+earlier.
+
+We run the following command:
+
+`compairr -x setc.tsv setb.tsv -d 1 -f -o output.tsv -p pairs.tsv`
+
+Here is the output to the console:
+
+```
+CompAIRR 1.3.2 - Comparison of Adaptive Immune Receptor Repertoires
+https://github.com/uio-bmi/compairr
+
+Start time:        Wed Oct 27 16:55:35 CEST 2021
+Command (m/c/x):   Existence (-x)
+Repertoire:        setc.tsv
+Repertoire set:    setb.tsv
+Nucleotides (n):   No
+Differences (d):   1
+Indels (i):        No
+Ignore counts (f): Yes
+Ignore genes (g):  No
+Threads (t):       1
+Output file (o):   x
+Output format (a): Matrix
+Summands (s):      Product
+Pairs file (p):    p
+Log file (l):      (stderr)
+
+Immune receptor repertoire set 1
+
+Reading sequences: 100% (0s)
+Repertoires:       1
+Sequences:         2
+Residues:          25
+Shortest:          11
+Longest:           14
+Average length:    12.5
+Total dupl. count: 2
+Indexing:          100% (0s)
+
+Repertoires in set:
+# Sequences Count Repertoire ID
+1         2     2 C
+
+Immune receptor repertoire set 2
+
+Reading sequences: 100% (0s)
+Repertoires:       2
+Sequences:         3
+Residues:          39
+Shortest:          11
+Longest:           14
+Average length:    13.0
+Total dupl. count: 22
+Indexing:          100% (0s)
+
+Repertoires in set:
+# Sequences Count Repertoire ID
+1         2    15 B1
+2         1     7 B2
+
+Unique V genes:    2
+Unique J genes:    2
+Computing hashes:  100% (0s)
+Computing hashes:  100% (0s)
+Hashing sequences: 100% (0s)
+Analysing:         100% (0s)
+Writing results:   100% (0s)
+
+End time:          Wed Oct 27 16:55:35 CEST 2021
+```
+
+Here is the result in the `output.tsv` file:
+
+```tsv
+#	B1	B2
+X	2	0
+Y	0	1
+```
+
+Please note that the `-f` option was used to ignore the duplicate
+counts.
+
+And here is the result in the `pairs.tsv` file:
+
+```tsv
+#repertoire_id_1	sequence_id_1	duplicate_count_1	v_call_1	j_call_1	junction_aa_1	repertoire_id_2	sequence_id_2	duplicate_count_2	v_call_2	j_call_2	junction_aa_2
+C	X	1	TCRBV07-09	TCRBJ01-02	CASSLRVGGFGYTF	B1	U	10	TCRBV07-09	TCRBJ01-02	CASSLRVGGFGYTF
+C	X	1	TCRBV07-09	TCRBJ01-02	CASSLRVGGFGYTF	B1	T	5	TCRBV07-09	TCRBJ01-02	CASSLRVGGYGYTF
+C	Y	1	TCRBV07-06	TCRBJ02-01	CASSTSHQQYF	B2	V	7	TCRBV07-06	TCRBJ02-01	CASSTSHQQYF
+```
+
+The results indicate that sequence X was found (twice) in repertoire
+B1 (matching sequences T and U) and that sequence Y was found in
+repertoire B2 (matching sequence V).
+
+
+## Example - Clustering sequences
+
+This time we will cluster the nucleotide sequences in the file
+`setb.tsv` using the `-c` or `--cluster` option.
+
+The command line to run is:
+
+`compairr -c setb.tsv -d 1 -n -o output.tsv`
+
+The output during the clustering is as follows:
+
+```
+CompAIRR 1.3.2 - Comparison of Adaptive Immune Receptor Repertoires
+https://github.com/uio-bmi/compairr
+
+Start time:        Wed Oct 27 17:18:55 CEST 2021
+Command (m/c/x):   Cluster (-c)
+Repertoire:        setb.tsv
+Nucleotides (n):   Yes
+Differences (d):   1
+Indels (i):        No
+Ignore counts (f): No
+Ignore genes (g):  No
+Threads (t):       1
+Output file (o):   output.tsv
+Log file (l):      (stderr)
+
+Immune receptor repertoire clustering
+
+Reading sequences: 100% (0s)
+Repertoires:       2
+Sequences:         3
+Residues:          117
+Shortest:          33
+Longest:           42
+Average length:    39.0
+Total dupl. count: 22
+Indexing:          100% (0s)
+
+Unique V genes:    2
+Unique J genes:    2
+
+Computing hashes:  100% (0s)
+Hashing sequences: 100% (0s)
+Building network:  100% (0s)
+Clustering:        100% (0s)
+Sorting clusters:  100% (0s)
+Writing clusters:  100% (0s)
+
+Clusters:          2
+End time:          Wed Oct 27 17:18:55 CEST 2021
+```
+
+The result in the file `output.tsv` looks like this:
+
+```tsv
+#cluster_no	cluster_size	repertoire_id	sequence_id	duplicate_count	v_call	j_call	junction
+1	2	B1	T	5	TCRBV07-09	TCRBJ01-02	tgcgcgagcagcctgcgcgtgggcggctatggctataccttt
+1	2	B1	U	10	TCRBV07-09	TCRBJ01-02	tgcgcgagcagcctgcgcgtgggcggctttggctataccttt
+2	1	B2	V	7	TCRBV07-06	TCRBJ02-01	tgcgcgagcagcaccagccatcagcagtatttt
+```
+
+In this case, there are 2 clusters. The first contains 2 sequences (T
+and U from B1), while the second cluster contains 1 sequence (V from
+B2). The sequences are clustered across repertoires.
 
 
 ## Performance
@@ -394,7 +611,7 @@ simple script. We will consider providing such a script.
 ## Development team
 
 The code has been developed by Torbjørn Rognes based on code from
-Swarm where Frédéric Mahé and Lucas Czeck made important
+Swarm where Frédéric Mahé and Lucas Czech made important
 contributions. Geir Kjetil Sandve had the idea of developing a tool
 for rapid repertoire set comparison. Lonneke Scheffer has tested and
 benchmarked the tool, and suggested new features. Milena Pavlovic and
