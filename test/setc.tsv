@@ -1,0 +1,3 @@
+repertoire_id	sequence_id	duplicate_count	v_call	j_call	junction	junction_aa	sequence	rev_comp	productive	d_call	sequence_alignment	germline_alignment	v_cigar	d_cigar	j_cigar
+C	X	1	TCRBV07-09	TCRBJ01-02	tgcgcgagcagcctgcgcgtgggcggctttggctataccttt	CASSLRVGGFGYTF									
+C	Y	1	TCRBV07-06	TCRBJ02-01	tgcgcgagcagcaccagccatcagcagtatttt	CASSTSHQQYF									
