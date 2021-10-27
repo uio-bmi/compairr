@@ -243,13 +243,13 @@ void parse_airr_tsv_line(char * line,
                          bool require_repertoire_id,
                          bool require_sequence_id)
 {
-  char * repertoire_id = nullptr;
-  char * sequence_id = nullptr;
-  char * duplicate_count = nullptr;
-  char * v_call = nullptr;
-  char * j_call = nullptr;
-  char * junction = nullptr;
-  char * junction_aa = nullptr;
+  const char * repertoire_id = nullptr;
+  const char * sequence_id = nullptr;
+  const char * duplicate_count = nullptr;
+  const char * v_call = nullptr;
+  const char * j_call = nullptr;
+  const char * junction = nullptr;
+  const char * junction_aa = nullptr;
 
   char delim[] = "\t";
   char * string = line;
@@ -305,31 +305,30 @@ void parse_airr_tsv_line(char * line,
 
   /* handle repertoire_id */
 
-  if (repertoire_id && *repertoire_id)
-    {
-      auto r_it = d->repertoire_id_map.find(repertoire_id);
-      if (r_it != d->repertoire_id_map.end())
-        {
-          p->repertoire_id_no = r_it->second;
-        }
-      else
-        {
-          p->repertoire_id_no = d->repertoire_id_vector.size();
-          d->repertoire_id_vector.push_back(repertoire_id);
-          d->repertoire_id_map.insert({repertoire_id, p->repertoire_id_no});
-        }
-    }
-  else if (require_repertoire_id)
+  if (require_repertoire_id && ! (repertoire_id && *repertoire_id))
     {
       fprintf(logfile,
-              "\n\nError: missing or empty repertoire_id value on line: %"
+              "\n\nError: missing or empty repertoire_id value on line %"
               PRIu64 "\n",
               lineno);
       exit(1);
     }
+
+  if (! repertoire_id)
+    {
+      repertoire_id = EMPTYSTRING;
+    }
+
+  auto r_it = d->repertoire_id_map.find(repertoire_id);
+  if (r_it != d->repertoire_id_map.end())
+    {
+      p->repertoire_id_no = r_it->second;
+    }
   else
     {
-      p->repertoire_id_no = 0;
+      p->repertoire_id_no = d->repertoire_id_vector.size();
+      d->repertoire_id_vector.push_back(repertoire_id);
+      d->repertoire_id_map.insert({repertoire_id, p->repertoire_id_no});
     }
 
 
@@ -342,7 +341,7 @@ void parse_airr_tsv_line(char * line,
   else if (require_sequence_id)
     {
       fprintf(logfile,
-              "\n\nError: missing or empty sequence_id value on line: %"
+              "\n\nError: missing or empty sequence_id value on line %"
               PRIu64 "\n",
               lineno);
       exit(1);
@@ -355,89 +354,92 @@ void parse_airr_tsv_line(char * line,
 
   /* handle duplicate_count */
 
-  long count = 1;
-
   if (duplicate_count && *duplicate_count)
     {
-      char * endptr;
-      count = strtol(duplicate_count, &endptr, 10);
-      if ((endptr == nullptr) || (*endptr) || (count < 1))
+      char * endptr = nullptr;
+      long count = strtol(duplicate_count, &endptr, 10);
+      if (endptr && (*endptr == 0) && (count >= 1))
+        {
+          p->count = count;
+        }
+      else
         {
           fprintf(logfile, "\n\nError: Illegal duplicate_count on line %"
                   PRIu64 ": %s\n", lineno, duplicate_count);
           exit(1);
         }
     }
-  else if (! opt_ignore_counts)
+  else if (opt_ignore_counts)
     {
-      fprintf(logfile,
-              "\n\nError: missing or empty duplicate_count on line: %"
-              PRIu64 "\n",
-              lineno);
-      exit(1);
-    }
-
-  p->count = count;
-  d->total_duplicate_count += count;
-
-
-  /* handle v_call */
-
-  if (v_call && *v_call)
-    {
-      auto v_it = v_gene_map.find(v_call);
-      if (v_it != v_gene_map.end())
-        {
-          p->v_gene_no = v_it->second;
-        }
-      else
-        {
-          p->v_gene_no = v_gene_vector.size();
-          v_gene_vector.push_back(v_call);
-          v_gene_map.insert({v_call, p->v_gene_no});
-        }
-    }
-  else if (opt_ignore_genes)
-    {
-      p->v_gene_no = 0;
+      p->count = 1;
     }
   else
     {
       fprintf(logfile,
-              "\n\nError: missing or empty v_call value on line: %"
+              "\n\nError: missing or empty duplicate_count on line %"
               PRIu64 "\n",
               lineno);
       exit(1);
+    }
+
+  d->total_duplicate_count += p->count;
+
+
+  /* handle v_call */
+
+  if (! opt_ignore_genes && ! (v_call && *v_call))
+    {
+      fprintf(logfile,
+              "\n\nError: missing or empty v_call value on line %"
+              PRIu64 "\n",
+              lineno);
+      exit(1);
+    }
+
+  if (! v_call)
+    {
+      v_call = EMPTYSTRING;
+    }
+
+  auto v_it = v_gene_map.find(v_call);
+  if (v_it != v_gene_map.end())
+    {
+      p->v_gene_no = v_it->second;
+    }
+  else
+    {
+      p->v_gene_no = v_gene_vector.size();
+      v_gene_vector.push_back(v_call);
+      v_gene_map.insert({v_call, p->v_gene_no});
     }
 
 
   /* handle j_call */
 
-  if (j_call && *j_call)
-    {
-      auto j_it = j_gene_map.find(j_call);
-      if (j_it != j_gene_map.end())
-        {
-          p->j_gene_no = j_it->second;
-        }
-      else
-        {
-          p->j_gene_no = j_gene_vector.size();
-          j_gene_vector.push_back(j_call);
-          j_gene_map.insert({j_call, p->j_gene_no});
-        }
-    }
-  else if (opt_ignore_genes)
-    {
-      p->j_gene_no = 0;
-    }
-  else
+  if (! opt_ignore_genes && ! (j_call && *j_call))
     {
       fprintf(logfile,
-              "\n\nError: missing or empty j_call value on line: %"
+              "\n\nError: missing or empty j_call value on line %"
               PRIu64 "\n",
               lineno);
       exit(1);
+    }
+
+  if (! j_call)
+    {
+      j_call = EMPTYSTRING;
+    }
+
+  auto j_it = j_gene_map.find(j_call);
+  if (j_it != j_gene_map.end())
+    {
+      p->j_gene_no = j_it->second;
+    }
+  else
+    {
+      p->j_gene_no = j_gene_vector.size();
+      j_gene_vector.push_back(j_call);
+      j_gene_map.insert({j_call, p->j_gene_no});
     }
 
 
@@ -448,7 +450,7 @@ void parse_airr_tsv_line(char * line,
       if (! (junction && *junction))
         {
           fprintf(logfile,
-                  "\n\nError: missing or empty junction value on line: %"
+                  "\n\nError: missing or empty junction value on line %"
                   PRIu64 "\n",
                   lineno);
           exit(1);
@@ -460,7 +462,7 @@ void parse_airr_tsv_line(char * line,
       if (! (junction_aa && *junction_aa))
         {
           fprintf(logfile,
-                  "\n\nError: missing or empty junction_aa value on line: %"
+                  "\n\nError: missing or empty junction_aa value on line %"
                   PRIu64 "\n",
                   lineno);
           exit(1);
@@ -698,15 +700,6 @@ void db_read(struct db * d,
 
   d->repertoire_count = d->repertoire_id_vector.size();
 
-  /* if repertoire_id is not used, insert empty string as ID of first */
-
-  if (d->repertoire_count == 0)
-    {
-      d->repertoire_id_vector.push_back("");
-      d->repertoire_id_map.insert({"", 0});
-      d->repertoire_count = 1;
-    }
-
   fprintf(logfile,
           "Repertoires:       %" PRIu64 "\n"
           "Sequences:         %" PRIu64 "\n"
@@ -844,12 +837,14 @@ uint64_t db_get_j_gene_count()
 
 const char * db_get_v_gene_name(struct db * d, uint64_t seqno)
 {
-  return v_gene_vector[d->seqindex[seqno].v_gene_no].c_str();
+  int v_gene_no = d->seqindex[seqno].v_gene_no;
+  return v_gene_vector[v_gene_no].c_str();
 }
 
 const char * db_get_j_gene_name(struct db * d, uint64_t seqno)
 {
-  return j_gene_vector[d->seqindex[seqno].j_gene_no].c_str();
+  int j_gene_no = d->seqindex[seqno].j_gene_no;
+  return j_gene_vector[j_gene_no].c_str();
 }
 
 void db_fprint_sequence(FILE * f, struct db * d, uint64_t seqno)
