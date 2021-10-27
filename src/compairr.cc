@@ -167,7 +167,7 @@ void args_usage()
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
-  fprintf(stderr, " -a, --alternative           output matrix results in column format\n");
+  fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
   fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none)\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout)\n");
