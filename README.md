@@ -141,8 +141,8 @@ Two input files with repertoire sets in standard format must be
 specified on the command line. The first file should contain the
 different sequences to analyse. The `sequence_id` column must be
 present in this file. If the optional `repertoire_id` column is
-present, all the identifiers must be identical. The second file must
-contain the different repertoires. The `repertoire_id` column must be
+present, all those identifiers must be identical. The second file must
+contain the repertoires to match. The `repertoire_id` column must be
 present in the second file.
 
 CompAIRR will identify in which repertoires each sequence is present
@@ -374,20 +374,6 @@ This small dataset is included in the test folder and the tool can
 automatically be tested by running `make test`.
 
 
-## Implementation
-
-The program is written in C++. The strategy for finding similar
-sequences is based on a similar concept developed for the tool
-[Swarm](https://github.com/torognes/swarm) (Mahé et al.
-2021). Basically, a 64-bit hash is computed for all sequences in the
-sets. All hashes for one set are stored in a Bloom filter and in a
-hash table. We then look for matches to sequences in the second set by
-looking them up in the Bloom filter and then, if there was a match, in
-the hash table. To find matches with 1 or 2 substitutions or indels,
-the hashes of all these variants sequences are generated and looked
-up.
-
-
 ## Example - Sequence existence
 
 In this example we will use the `-x` or `--existence` option to find
@@ -426,10 +412,10 @@ Indels (i):        No
 Ignore counts (f): Yes
 Ignore genes (g):  No
 Threads (t):       1
-Output file (o):   x
+Output file (o):   output.tsv
 Output format (a): Matrix
 Summands (s):      Product
-Pairs file (p):    p
+Pairs file (p):    pairs.tsv
 Log file (l):      (stderr)
 
 Immune receptor repertoire set 1
@@ -566,6 +552,20 @@ The result in the file `output.tsv` looks like this:
 In this case, there are 2 clusters. The first contains 2 sequences (T
 and U from B1), while the second cluster contains 1 sequence (V from
 B2). The sequences are clustered across repertoires.
+
+
+## Implementation
+
+The program is written in C++. The strategy for finding similar
+sequences is based on a similar concept developed for the tool
+[Swarm](https://github.com/torognes/swarm) (Mahé et al.
+2021). Basically, a 64-bit hash is computed for all sequences in the
+sets. All hashes for one set are stored in a Bloom filter and in a
+hash table. We then look for matches to sequences in the second set by
+looking them up in the Bloom filter and then, if there was a match, in
+the hash table. To find matches with 1 or 2 substitutions or indels,
+the hashes of all these variants sequences are generated and looked
+up.
 
 
 ## Performance
