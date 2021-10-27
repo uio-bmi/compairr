@@ -6,7 +6,7 @@ CompAIRR (`compairr`) is a command line tool to compare two sets of
 adaptive immune receptor repertoires and compute their overlap. It can
 also identify which sequences are present in which repertoires.
 Furthermore, CompAIRR can cluster the sequences in a repertoire
-set. Sequence comparisons can be exact or inexact, allowing 0-2
+set. Sequence comparisons can be exact or approximate, allowing 0-2
 substitutions and an indel, if desired. CompAIRR has been shown to be
 very fast and to have a small memory footprint compared to similar
 tools.
