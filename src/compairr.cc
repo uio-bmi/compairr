@@ -154,7 +154,7 @@ void args_usage()
   fprintf(stderr, " -h, --help                  display this help and exit\n");
   fprintf(stderr, " -v, --version               display version information\n");
   fprintf(stderr, " -m, --matrix                compute overlap matrix between two sets\n");
-  fprintf(stderr, " -x, --existence             check existence of repertoire sequences in set\n");
+  fprintf(stderr, " -x, --existence             check existence of sequences in repertoires\n");
   fprintf(stderr, " -c, --cluster               cluster sequences in one repertoire\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
