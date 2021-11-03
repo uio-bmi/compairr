@@ -600,6 +600,14 @@ Wall time and memory usage was measured by `/usr/bin/time`. The
 analysis was performed on an Apple Mac Mini M1 (2020) with 16GB RAM.
 
 
+## Benchmarking
+
+The AIRR overlap functionality of CompAIRR has been thoroughly
+benchmarked against similar tools. All data, scripts, and results are
+available in a separate [CompAIRR benchmarking
+repository](https://github.com/uio-bmi/compairr-benchmarking).
+
+
 ## Tips
 
 If computer memory is limited, the dataset may be split into blocks
