@@ -650,7 +650,7 @@ A preprint about CompAIRR is available on bioRxiv and we are preparing
 to submit a manuscript to a peer-reviewed journal. For the time being,
 please cite the following if you use CompAIRR in any published work:
 
-* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** *bioRxiv* 2021.10.30.466600. doi: [10.1101/2021.10.30.466600](https://doi.org/10.1101/2021.10.30.466600)
+* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** *bioRxiv*, 2021.10.30.466600. doi: [10.1101/2021.10.30.466600](https://doi.org/10.1101/2021.10.30.466600)
 
 
 ## References
