@@ -646,11 +646,11 @@ If you would like to contribute with code you are most welcome to
 
 ## Citing CompAIRR
 
-We are preparing a manuscript about CompAIRR, but it is not yet
-available. For the time being, please cite the following if you use
-CompAIRR in any published work:
+A preprint about CompAIRR is available on biorXiv and we are preparing
+to submit a manuscript to a peer-reviewed journal. For the time being,
+please cite the following if you use CompAIRR in any published work:
 
-* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** (in prep.)
+* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** *biorXiv* 2021.10.30.466600. doi:[10.1101/2021.10.30.466600](https://doi.org/10.1101/2021.10.30.466600)
 
 
 ## References
