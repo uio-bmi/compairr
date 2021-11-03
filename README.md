@@ -212,7 +212,7 @@ ignored.
 ## Command line options
 
 ```
-CompAIRR 1.4.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
@@ -221,7 +221,7 @@ Commands:
  -h, --help                  display this help and exit
  -v, --version               display version information
  -m, --matrix                compute overlap matrix between two sets
- -x, --existence             check existence of repertoire sequences in set
+ -x, --existence             check existence of sequences in repertoires
  -c, --cluster               cluster sequences in one repertoire
 
 General options:
@@ -270,7 +270,7 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 1.4.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Start time:        Wed Oct 27 16:38:05 CEST 2021
@@ -399,7 +399,7 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 1.4.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Start time:        Wed Oct 27 16:55:35 CEST 2021
@@ -499,7 +499,7 @@ The command line to run is:
 The output during the clustering is as follows:
 
 ```
-CompAIRR 1.4.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
 Start time:        Wed Oct 27 17:18:55 CEST 2021
