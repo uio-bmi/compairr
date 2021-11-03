@@ -135,7 +135,7 @@ unspecified.
 ## Analysing in which repertoires a set of sequences are present
 
 Use the option `-x` or `--existence` to analyse in which repertoires a
-set of sequences are present.
+set of sequences are present, and create a sequence presence matrix.
 
 Two input files with repertoire sets in standard format must be
 specified on the command line. The first file should contain the
