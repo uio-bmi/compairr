@@ -646,15 +646,15 @@ If you would like to contribute with code you are most welcome to
 
 ## Citing CompAIRR
 
-A preprint about CompAIRR is available on biorXiv and we are preparing
+A preprint about CompAIRR is available on bioRxiv and we are preparing
 to submit a manuscript to a peer-reviewed journal. For the time being,
 please cite the following if you use CompAIRR in any published work:
 
-* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** *biorXiv* 2021.10.30.466600. doi:[10.1101/2021.10.30.466600](https://doi.org/10.1101/2021.10.30.466600)
+* Rognes T, Scheffer L, Greiff V, Sandve GK (2021) **CompAIRR: ultra-fast comparison of adaptive immune receptor repertoires by exact and approximate sequence matching.** *bioRxiv* 2021.10.30.466600. doi: [10.1101/2021.10.30.466600](https://doi.org/10.1101/2021.10.30.466600)
 
 
 ## References
 
-* Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017) **Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.** *Nature Genetics*, 49 (5): 659-665. doi:[10.1038/ng.3822](https://doi.org/10.1038/ng.3822)
+* Emerson RO, DeWitt WS, Vignali M, Gravley J, Hu JK, Osborne EJ, Desmarais C, Klinger M, Carlson CS, Hansen JA, Rieder M, Robins HS (2017) **Immunosequencing identifies signatures of cytomegalovirus exposure history and HLA-mediated effects on the T cell repertoire.** *Nature Genetics*, 49 (5): 659-665. doi: [10.1038/ng.3822](https://doi.org/10.1038/ng.3822)
 
-* Mahé F, Czech L, Stamatakis A, Quince C, de Vargas C, Dunthorn M, Rognes T (2021) **Swarm v3: Towards Tera-Scale Amplicon Clustering.** *Bioinformatics*, btab493. doi:[10.1093/bioinformatics/btab493](https://doi.org/10.1093/bioinformatics/btab493)
+* Mahé F, Czech L, Stamatakis A, Quince C, de Vargas C, Dunthorn M, Rognes T (2021) **Swarm v3: Towards Tera-Scale Amplicon Clustering.** *Bioinformatics*, btab493. doi: [10.1093/bioinformatics/btab493](https://doi.org/10.1093/bioinformatics/btab493)
