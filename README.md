@@ -564,7 +564,7 @@ sets. All hashes for one set are stored in a Bloom filter and in a
 hash table. We then look for matches to sequences in the second set by
 looking them up in the Bloom filter and then, if there was a match, in
 the hash table. To find matches with 1 or 2 substitutions or indels,
-the hashes of all these variants sequences are generated and looked
+the hashes of all these variant sequences are generated and looked
 up.
 
 
