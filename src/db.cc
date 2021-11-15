@@ -303,6 +303,126 @@ void parse_airr_tsv_line(char * line,
   seqinfo_t * p = d->seqindex + d->sequences;
 
 
+  /* make room for more residues */
+
+  unsigned int len_estimate = 0;
+  if (opt_nucleotides)
+    len_estimate = strlen(junction);
+  else
+    len_estimate = strlen(junction_aa);
+
+  if (d->residues_count + len_estimate > d->residues_alloc)
+    {
+      d->residues_alloc += MEMCHUNK;
+      d->residues_p = static_cast<char *>
+        (xrealloc(d->residues_p, d->residues_alloc));
+    }
+
+
+  /* scan and store sequence */
+
+  char * q = d->residues_p + d->residues_count;
+  unsigned int seqlen = 0;
+  bool ignore_seq = false;
+
+  if (opt_nucleotides)
+    {
+      for(unsigned int i = 0; i < len_estimate; i++)
+        {
+          unsigned char c = junction[i];
+          signed char m = map_nt[static_cast<unsigned int>(c)];
+          if (m >= 0)
+            {
+              *q++ = m;
+              seqlen++;
+            }
+          else
+            {
+              if ((c >= 32) && (c <= 126))
+                {
+                  if (opt_ignore_unknown)
+                    {
+                      ignore_seq = true;
+                    }
+                  else
+                    {
+                      fprintf(logfile,
+                              "\n\nError: Illegal character '%c' in sequence "
+                              "on line %" PRIu64 "\n",
+                              c,
+                              lineno);
+                      exit(1);
+                    }
+                }
+              else
+                {
+                  fprintf(logfile,
+                          "\n\nError: Illegal character (ascii no %d) in sequence "
+                          "on line %" PRIu64 "\n",
+                          c,
+                          lineno);
+                  exit(1);
+                }
+            }
+        }
+    }
+  else
+    {
+      for(unsigned int i = 0; i < len_estimate; i++)
+        {
+          unsigned char c = junction_aa[i];
+          signed char m = map_aa[static_cast<unsigned int>(c)];
+          if (m >= 0)
+            {
+              *q++ = m;
+              seqlen++;
+            }
+          else
+            {
+              if ((c >= 32) && (c <= 126))
+                {
+                  if (opt_ignore_unknown)
+                    {
+                      ignore_seq = true;
+                    }
+                  else
+                    {
+                      fprintf(logfile,
+                              "\n\nError: Illegal character '%c' in sequence "
+                              "on line %" PRIu64 "\n",
+                              c,
+                              lineno);
+                      exit(1);
+                    }
+                }
+              else
+                {
+                  fprintf(logfile,
+                          "\n\nError: Illegal character (ascii no %d) in sequence "
+                          "on line %" PRIu64 "\n",
+                          c,
+                          lineno);
+                  exit(1);
+                }
+            }
+        }
+    }
+
+  if (ignore_seq)
+    {
+      return;
+    }
+  else
+    {
+      d->residues_count += seqlen;
+      p->seqlen = seqlen;
+      if (seqlen > d->longest)
+        d->longest = seqlen;
+      if (seqlen < d->shortest)
+        d->shortest = seqlen;
+    }
+
+
   /* handle repertoire_id */
 
   if (require_repertoire_id && ! (repertoire_id && *repertoire_id))
@@ -469,91 +589,6 @@ void parse_airr_tsv_line(char * line,
         }
     }
 
-  /* make room for more residues */
-
-  unsigned int len_estimate = 0;
-  if (opt_nucleotides)
-    len_estimate = strlen(junction);
-  else
-    len_estimate = strlen(junction_aa);
-
-  if (d->residues_count + len_estimate > d->residues_alloc)
-    {
-      d->residues_alloc += MEMCHUNK;
-      d->residues_p = static_cast<char *>
-        (xrealloc(d->residues_p, d->residues_alloc));
-    }
-
-  /* scan and store sequence */
-
-  char * q = d->residues_p + d->residues_count;
-  unsigned int seqlen = 0;
-
-  if (opt_nucleotides)
-    {
-      for(unsigned int i = 0; i < len_estimate; i++)
-        {
-          unsigned char c = junction[i];
-          signed char m = map_nt[static_cast<unsigned int>(c)];
-          if (m >= 0)
-            {
-              *q++ = m;
-              seqlen++;
-            }
-          else
-            {
-              if ((c >= 32) && (c <= 126))
-                fprintf(logfile,
-                        "\n\nError: Illegal character '%c' in sequence "
-                        "on line %" PRIu64 "\n",
-                        c,
-                        lineno);
-              else
-                fprintf(logfile,
-                        "\n\nError: Illegal character (ascii no %d) in sequence "
-                        "on line %" PRIu64 "\n",
-                        c,
-                        lineno);
-              exit(1);
-            }
-        }
-    }
-  else
-    {
-      for(unsigned int i = 0; i < len_estimate; i++)
-        {
-          unsigned char c = junction_aa[i];
-          signed char m = map_aa[static_cast<unsigned int>(c)];
-          if (m >= 0)
-            {
-              *q++ = m;
-              seqlen++;
-            }
-          else
-            {
-              if ((c >= 32) && (c <= 126))
-                fprintf(logfile,
-                        "\n\nError: Illegal character '%c' in sequence "
-                        "on line %" PRIu64 "\n",
-                        c,
-                        lineno);
-              else
-                fprintf(logfile,
-                        "\n\nError: Illegal character (ascii no %d) in sequence "
-                        "on line %" PRIu64 "\n",
-                        c,
-                        lineno);
-              exit(1);
-            }
-        }
-    }
-
-  d->residues_count += seqlen;
-  p->seqlen = seqlen;
-  if (seqlen > d->longest)
-    d->longest = seqlen;
-  if (seqlen < d->shortest)
-    d->shortest = seqlen;
 
   p->hash = 0;
 
@@ -700,21 +735,39 @@ void db_read(struct db * d,
 
   d->repertoire_count = d->repertoire_id_vector.size();
 
-  fprintf(logfile,
-          "Repertoires:       %" PRIu64 "\n"
-          "Sequences:         %" PRIu64 "\n"
-          "Residues:          %" PRIu64 "\n"
-          "Shortest:          %u\n"
-          "Longest:           %u\n"
-          "Average length:    %4.1lf\n"
-          "Total dupl. count: %" PRIu64 "\n",
-          d->repertoire_count,
-          d->sequences,
-          d->residues_count,
-          d->shortest,
-          d->longest,
-          1.0 * d->residues_count / d->sequences,
-          d->total_duplicate_count);
+  if (d->sequences > 0)
+    {
+      fprintf(logfile,
+              "Repertoires:       %" PRIu64 "\n"
+              "Sequences:         %" PRIu64 "\n"
+              "Residues:          %" PRIu64 "\n"
+              "Shortest:          %u\n"
+              "Longest:           %u\n"
+              "Average length:    %4.1lf\n"
+              "Total dupl. count: %" PRIu64 "\n",
+              d->repertoire_count,
+              d->sequences,
+              d->residues_count,
+              d->shortest,
+              d->longest,
+              1.0 * d->residues_count / d->sequences,
+              d->total_duplicate_count);
+    }
+  else
+    {
+      fprintf(logfile,
+              "Repertoires:       %" PRIu64 "\n"
+              "Sequences:         %" PRIu64 "\n"
+              "Residues:          %" PRIu64 "\n"
+              "Shortest:          -\n"
+              "Longest:           -\n"
+              "Average length:    -\n"
+              "Total dupl. count: %" PRIu64 "\n",
+              d->repertoire_count,
+              d->sequences,
+              d->residues_count,
+              d->total_duplicate_count);
+    }
 
   /* add sequence pointers to index table */
 

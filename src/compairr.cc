@@ -52,6 +52,7 @@ bool opt_existence;
 bool opt_help;
 bool opt_ignore_counts;
 bool opt_ignore_genes;
+bool opt_ignore_unknown;
 bool opt_indels;
 bool opt_matrix;
 bool opt_nucleotides;
@@ -135,6 +136,8 @@ void args_show()
           opt_ignore_counts ? "Yes" : "No");
   fprintf(logfile, "Ignore genes (g):  %s\n",
           opt_ignore_genes ? "Yes" : "No");
+  fprintf(logfile, "Ignore unknown residues (u): %s\n",
+          opt_ignore_unknown ? "Yes" : "No");
   fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
   fprintf(logfile, "Output file (o):   %s\n", opt_output);
   if (opt_matrix || opt_existence)
@@ -165,6 +168,7 @@ void args_usage()
   fprintf(stderr, " -n, --nucleotides           compare nucleotides, not amino acids\n");
   fprintf(stderr, " -s, --summands STRING       sum product (default), ratio, min, max, or mean\n");
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
+  fprintf(stderr, " -u, --ignore-unknown        ignore sequences with unknown symbols (No)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
@@ -198,6 +202,7 @@ void args_init(int argc, char **argv)
   opt_indels = false;
   opt_ignore_counts = false;
   opt_ignore_genes = false;
+  opt_ignore_unknown = false;
   opt_nucleotides = false;
   opt_summands_int = 0;
   opt_summands_string = NULL;
@@ -209,7 +214,7 @@ void args_init(int argc, char **argv)
 
   opterr = 1;
 
-  char short_options[] = "acd:fghil:mno:p:s:t:vx";
+  char short_options[] = "acd:fghil:mno:p:s:t:uvx";
 
   /* unused short option letters: bejkqruwxyz */
 
@@ -229,6 +234,7 @@ void args_init(int argc, char **argv)
     {"pairs",            required_argument, nullptr, 'p' },
     {"summands",         required_argument, nullptr, 's' },
     {"threads",          required_argument, nullptr, 't' },
+    {"ignore-unknown",   no_argument,       nullptr, 'u' },
     {"version",          no_argument,       nullptr, 'v' },
     {"existence",        no_argument,       nullptr, 'x' },
     {nullptr,            0,                 nullptr, 0   }
@@ -341,6 +347,11 @@ void args_init(int argc, char **argv)
       case 't':
         /* threads */
         opt_threads = args_long(optarg, "-t or --threads");
+        break;
+
+      case 'u':
+        /* ignore-unknown */
+        opt_ignore_unknown = true;
         break;
 
       case 'v':

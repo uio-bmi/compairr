@@ -135,6 +135,7 @@ extern bool opt_existence;
 extern bool opt_help;
 extern bool opt_ignore_counts;
 extern bool opt_ignore_genes;
+extern bool opt_ignore_unknown;
 extern bool opt_indels;
 extern bool opt_matrix;
 extern bool opt_nucleotides;
