@@ -136,7 +136,7 @@ void args_show()
           opt_ignore_counts ? "Yes" : "No");
   fprintf(logfile, "Ignore genes (g):  %s\n",
           opt_ignore_genes ? "Yes" : "No");
-  fprintf(logfile, "Ignore unknown residues (u): %s\n",
+  fprintf(logfile, "Ign. unknown (u):  %s\n",
           opt_ignore_unknown ? "Yes" : "No");
   fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
   fprintf(logfile, "Output file (o):   %s\n", opt_output);

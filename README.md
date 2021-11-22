@@ -61,6 +61,12 @@ will also be written here.
 
 The default is to compare amino acid sequences, but nucleotide
 sequences are compared if the `-n` or `--nucleotides` option is given.
+The accepted amino acid symbols are `ACDEFGHIKLMNPQRSTVWY`, while the
+accepted nucleotide symbols are `ACGTU`. Lower case letters are also
+accepted. The program will abort with an error message if any other
+symbol is encountered in a sequence, unless one specifies the `-u` or
+`--ignore-unknown` option, in which case CompAIRR will simply ignore
+that sequence.
 
 The user can specify whether 0, 1 or 2 differences are allowed when
 comparing sequences, using the option `-d` or `--differences`. To allow
@@ -209,36 +215,33 @@ See below for an example. Other fields may be included, but will be
 ignored.
 
 
-## Command line options
+## Command line option overview
 
-```
-CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
-https://github.com/uio-bmi/compairr
+The command line should like this:
 
-Usage: compairr [OPTIONS] TSVFILE1 [TSVFILE2]
+`compairr OPTIONS TSVFILE1 [TSVFILE2]`
 
-Commands:
- -h, --help                  display this help and exit
- -v, --version               display version information
- -m, --matrix                compute overlap matrix between two sets
- -x, --existence             check existence of sequences in repertoires
- -c, --cluster               cluster sequences in one repertoire
+Exactly one of the command options `-m`, `-x` or `-c` (or their long forms) must be specified. Other options as indicated in the table below could also be included. With the `-m` and `-x` command options, the names of two tab-separated value files with repertoires must also be specified on the command line, with the `-c` command option, only one such file should be specified.
 
-General options:
- -d, --differences INTEGER   number (0-2) of differences accepted (0)
- -i, --indels                allow insertions or deletions
- -f, --ignore-counts         ignore duplicate_count information
- -g, --ignore-genes          ignore V and J gene information
- -n, --nucleotides           compare nucleotides, not amino acids
- -s, --summands STRING       sum product (default), ratio, min, max, or mean
- -t, --threads INTEGER       number of threads to use (1)
-
-Input/output options:
- -a, --alternative           output results in three-column format, not matrix
- -p, --pairs FILENAME        output matching pairs to file (none)
- -l, --log FILENAME          log to file (stderr)
- -o, --output FILENAME       output results to file (stdout)
-```
+Short | Long               | Argument | Default  | Description
+------|--------------------|----------|----------|-------------
+`-a`  | `--alternative`    |          |          | Output results in three-column format, not matrix
+`-c`  | `--cluster`        |          |          | Cluster sequences in one repertoire
+`-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted (0-2)
+`-f`  | `--ignore-counts`  |          |          | Ignore duplicate count information
+`-g`  | `--ignore-genes`   |          |          | Ignore V and J gene information
+`-h`  | `--help`           |          |          | Display help text and exit
+`-i`  | `--indels`         |          |          | Allow insertions or deletions
+`-l`  | `--log`            | FILENAME | (stderr) | Log to specified file instead of stderr
+`-m`  | `--matrix`         |          |          | Compute overlap matrix between two sets
+`-n`  | `--nucleotides`    |          |          | Compare nucleotides, not amino acids
+`-o`  | `--output`         | FILENAME | (stdout) | Output results to specified file instead of stdout
+`-p`  | `--pairs`          | FILENAME | (none)   | Output matching pairs to specified file
+`-s`  | `--summands`       | STRING   | product  | Sum product, ratio, min, max, or mean
+`-t`  | `--threads`        | INTEGER  | 1        | Number of threads to use (1-256)
+`-u`  | `--ignore-unknown` |          |          | Ignore sequences that include unknown residue symbols
+`-v`  | `--version`        |          |          | Display version information
+`-x`  | `--existence`      |          |          | Check existence of sequences in repertoires
 
 
 ## Example - Repertoire overlap
