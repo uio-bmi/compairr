@@ -239,9 +239,9 @@ Short | Long               | Argument | Default  | Description
 `-n`  | `--nucleotides`    |          |          | Compare nucleotides, not amino acids
 `-o`  | `--output`         | FILENAME | (stdout) | Output results to specified file instead of stdout
 `-p`  | `--pairs`          | FILENAME | (none)   | Output matching pairs to specified file
-`-s`  | `--summands`       | STRING   | product  | Sum product, ratio, min, max, or mean
+`-s`  | `--summands`       | STRING   | product  | Sum `product`, `ratio`, `min`, `max`, or `mean`
 `-t`  | `--threads`        | INTEGER  | 1        | Number of threads to use (1-256)
-`-u`  | `--ignore-unknown` |          |          | Ignore sequences that include unknown residue symbols
+`-u`  | `--ignore-unknown` |          |          | Ignore sequences including unknown residue symbols
 `-v`  | `--version`        |          |          | Display version information
 `-x`  | `--existence`      |          |          | Check existence of sequences in repertoires
 
