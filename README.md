@@ -217,9 +217,11 @@ ignored.
 
 ## Command line option overview
 
-The command line should like this:
+The command line should look like this:
 
-`compairr OPTIONS TSVFILE1 [TSVFILE2]`
+```
+compairr OPTIONS TSVFILE1 [TSVFILE2]
+```
 
 Exactly one of the command options `-m`, `-x` or `-c` (or their long forms) must be specified. Other options as indicated in the table below could also be included. With the `-m` and `-x` command options, the names of two tab-separated value files with repertoires must also be specified on the command line, with the `-c` command option, only one such file should be specified.
 
