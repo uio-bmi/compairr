@@ -77,8 +77,9 @@ inline void hash_insert(uint64_t seq)
 
 void find_variant_matches(uint64_t seed,
                           var_s * var,
-                          unsigned int * hits_data,
-                          unsigned int * hits_count)
+                          unsigned int * * hits_data,
+                          unsigned int * hits_count,
+                          uint64_t * hits_alloc)
 {
   /* compute hash table index */
 
@@ -118,7 +119,14 @@ void find_variant_matches(uint64_t seed,
                                 var,
                                 hit_sequence, hit_seqlen))
                 {
-                  hits_data[(*hits_count)++] = hit;
+                  if (*hits_alloc <= *hits_count)
+                    {
+                      *hits_alloc += 1024;
+                      *hits_data = static_cast<unsigned int *>
+                        (xrealloc((*hits_data),
+                                  (*hits_alloc) * sizeof(unsigned int)));
+                    }
+                  (*hits_data)[(*hits_count)++] = hit;
                 }
             }
         }
@@ -128,8 +136,9 @@ void find_variant_matches(uint64_t seed,
 
 void process_variants(uint64_t seed,
                       var_s * variant_list,
-                      unsigned int * hits_data,
-                      unsigned int * hits_count)
+                      unsigned int * * hits_data,
+                      unsigned int * hits_count,
+                      uint64_t * hits_alloc)
 {
   unsigned int variant_count = 0;
   * hits_count = 0;
@@ -148,7 +157,7 @@ void process_variants(uint64_t seed,
     {
       var_s * var = variant_list + i;
       if (bloom_get(bloom, var->hash))
-        find_variant_matches(seed, var, hits_data, hits_count);
+        find_variant_matches(seed, var, hits_data, hits_count, hits_alloc);
     }
 }
 
@@ -160,8 +169,9 @@ void network_thread(int64_t t)
   uint64_t seqcount = db_getsequencecount(d);
   uint64_t maxvar = max_variants(longest);
 
+  uint64_t hits_alloc = 1024;
   auto * hits_data = static_cast<unsigned int *>
-    (xmalloc(maxvar * sizeof(unsigned int)));
+    (xmalloc(hits_alloc * sizeof(unsigned int)));
 
   auto * variant_list = static_cast<struct var_s *>
     (xmalloc(maxvar * sizeof(struct var_s)));
@@ -176,7 +186,8 @@ void network_thread(int64_t t)
       pthread_mutex_unlock(&network_mutex);
 
       unsigned int hits_count = 0;
-      process_variants(seed, variant_list, hits_data, & hits_count);
+      process_variants(seed, variant_list,
+                       & hits_data, & hits_count, & hits_alloc);
 
       pthread_mutex_lock(&network_mutex);
 
