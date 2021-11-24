@@ -803,7 +803,17 @@ void db_free(struct db * d)
   if (d->residues_p)
     xfree(d->residues_p);
   if (d->seqindex)
-    xfree(d->seqindex);
+    {
+      for (uint64_t i = 0; i < d->sequences; i++)
+        {
+          if (d->seqindex[i].sequence_id)
+            {
+              xfree(d->seqindex[i].sequence_id);
+              d->seqindex[i].sequence_id = nullptr;
+            }
+        }
+      xfree(d->seqindex);
+    }
   d->repertoire_id_vector.clear();
   d->repertoire_id_map.clear();
   delete d;

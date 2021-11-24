@@ -58,7 +58,7 @@ typedef struct pair_s
 const uint64_t CHUNK = 1000;
 const char * empty_string = "";
 
-void hash_insert(uint64_t rearr)
+static inline void hash_insert_overlap(uint64_t rearr)
 {
   /* set 2 */
   /* find the first empty bucket */
@@ -714,7 +714,7 @@ void overlap(char * set1_filename, char * set2_filename)
   progress_init("Hashing sequences:", set2_sequences);
   for(uint64_t i=0; i < set2_sequences; i++)
     {
-      hash_insert(i);
+      hash_insert_overlap(i);
       progress_update(i);
     }
   progress_done();

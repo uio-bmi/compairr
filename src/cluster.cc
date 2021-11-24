@@ -61,7 +61,7 @@ int compare_cluster(const void * a, const void * b)
     return 0;
 }
 
-inline void hash_insert(uint64_t seq)
+static inline void hash_insert_cluster(uint64_t seq)
 {
   /* find the first empty bucket */
   uint64_t hash = db_gethash(d, seq);
@@ -276,7 +276,7 @@ void cluster(char * filename)
     {
       iteminfo[i].clusterid = no_cluster;
       iteminfo[i].next = no_cluster;
-      hash_insert(i);
+      hash_insert_cluster(i);
       progress_update(i);
     }
   progress_done();
