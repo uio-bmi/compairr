@@ -252,7 +252,7 @@ void cluster(char * filename)
 
   fprintf(logfile, "\n");
 
-  zobrist_init(longest + 2,
+  zobrist_init(longest + MAX_INSERTS,
                db_get_v_gene_count(),
                db_get_j_gene_count());
 

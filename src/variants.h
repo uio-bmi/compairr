@@ -35,7 +35,8 @@ enum mutation_kind_enum
    del_ins,
    ins_sub,
    ins_del, /* not used */
-   ins_ins
+   ins_ins,
+   sub_sub_sub
   };
 
 /*
@@ -76,8 +77,10 @@ struct var_s
   enum mutation_kind_enum kind;
   unsigned int pos1;
   unsigned int pos2;
+  unsigned int pos3;
   unsigned char residue1;
   unsigned char residue2;
+  unsigned char residue3;
   /* alignment padding may be beneficial */
 };
 

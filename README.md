@@ -6,7 +6,7 @@ CompAIRR (`compairr`) is a command line tool to compare two sets of
 adaptive immune receptor repertoires and compute their overlap. It can
 also identify which sequences are present in which repertoires.
 Furthermore, CompAIRR can cluster the sequences in a repertoire
-set. Sequence comparisons can be exact or approximate, allowing 0-2
+set. Sequence comparisons can be exact or approximate, allowing 0-3
 substitutions and an indel, if desired. CompAIRR has been shown to be
 very fast and to have a small memory footprint compared to similar
 tools.
@@ -68,11 +68,15 @@ symbol is encountered in a sequence, unless one specifies the `-u` or
 `--ignore-unknown` option, in which case CompAIRR will simply ignore
 that sequence.
 
-The user can specify whether 0, 1 or 2 differences are allowed when
-comparing sequences, using the option `-d` or `--differences`. To allow
-indels (insertions or deletions) the option `-i` or `--indels` may be
-specified, otherwise only substitutions are allowed. By default, no
-differences are allowed. The `-i` option is allowed only when d=1.
+The user can specify whether 0, 1, 2 or 3 differences are allowed when
+comparing sequences, using the option `-d` or `--differences`. To
+allow indels (insertions or deletions) the option `-i` or `--indels`
+may be specified, otherwise only substitutions are allowed. By
+default, no differences are allowed. The `-i` option is allowed only
+when d=1. The number of differences allowed strongly influences the
+speed of CompAIRR. The program will be exponentially slower as more
+differences are allowed. It will be relatively slow with d=2 and even
+slower with d=3. See the section on performance below for an example.
 
 The V and J gene alleles specified for each sequence must also match,
 unless the `-g` or `--ignore-genes` option is in effect.
@@ -229,7 +233,7 @@ Short | Long               | Argument | Default  | Description
 ------|--------------------|----------|----------|-------------
 `-a`  | `--alternative`    |          |          | Output results in three-column format, not matrix
 `-c`  | `--cluster`        |          |          | Cluster sequences in one repertoire
-`-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted (0-2)
+`-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted (0-3)
 `-f`  | `--ignore-counts`  |          |          | Ignore duplicate count information
 `-g`  | `--ignore-genes`   |          |          | Ignore V and J gene information
 `-h`  | `--help`           |          |          | Display help text and exit
@@ -568,9 +572,9 @@ sequences is based on a similar concept developed for the tool
 sets. All hashes for one set are stored in a Bloom filter and in a
 hash table. We then look for matches to sequences in the second set by
 looking them up in the Bloom filter and then, if there was a match, in
-the hash table. To find matches with 1 or 2 substitutions or indels,
-the hashes of all these variant sequences are generated and looked
-up.
+the hash table. To find matches with 1, 2 or 3 substitutions or
+indels, the hashes of all these variant sequences are generated and
+looked up.
 
 
 ## Performance

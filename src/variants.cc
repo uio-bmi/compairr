@@ -22,7 +22,6 @@
 #include "compairr.h"
 
 //#define DUMP 1
-#define SMART 1
 //#define USEBLOOM 1
 //#define USEHASH 1
 //#define HASHSTATS 1
@@ -90,7 +89,7 @@ uint64_t max_variants(uint64_t longest)
   // identical non-variant
   maxvar += 1;
 
-  if (opt_differences > 0)
+  if (opt_differences >= 1)
     {
       // d = 1
       // substitutions
@@ -106,7 +105,7 @@ uint64_t max_variants(uint64_t longest)
         }
     }
 
-  if (opt_differences > 1)
+  if (opt_differences >= 2)
     {
       // d = 2
       // substitutions
@@ -116,7 +115,21 @@ uint64_t max_variants(uint64_t longest)
       if (opt_indels)
         {
           // deletions & insertions
-          fatal("Indels not supported for d=2");
+          fatal("Indels not supported for d>1");
+        }
+    }
+
+  if (opt_differences >= 3)
+    {
+      // d = 3
+      // substitutions
+      maxvar += longest * (longest - 1) * (longest - 2) / 6 *
+        (alphabet_size - 1) * (alphabet_size - 1) * (alphabet_size - 1);
+
+      if (opt_indels)
+        {
+          // deletions & insertions
+          fatal("Indels not supported for d>1");
         }
     }
 
@@ -255,6 +268,14 @@ void generate_variant_sequence(unsigned char * seed_sequence,
       * seqlen = seed_seqlen;
       break;
 
+    case sub_sub_sub:
+      seq_copy(seq, 0, seed_sequence, 0, seed_seqlen);
+      seq[var->pos1] = var->residue1;
+      seq[var->pos2] = var->residue2;
+      seq[var->pos3] = var->residue3;
+      * seqlen = seed_seqlen;
+      break;
+
     case sub_del:
     case sub_ins:
     case ins_del:
@@ -272,13 +293,8 @@ bool check_variant(unsigned char * seed_sequence,
                    unsigned char * amp_sequence,
                    unsigned int amp_seqlen)
 {
-  //return true; // just ignore the possibility
-
   /* make sure seed with given variant is really identical to amp */
   /* we know the hashes are identical */
-
-  if (var->kind > 4)
-    fprintf(stderr, "Var kind %d\n", var->kind);
 
   bool equal = false;
 
@@ -338,6 +354,25 @@ bool check_variant(unsigned char * seed_sequence,
                               seed_seqlen - var->pos2 - 1)));
       break;
 
+    case sub_sub_sub:
+      equal = ((seed_seqlen == amp_seqlen) &&
+               (amp_sequence[var->pos1] == var->residue1) &&
+               (amp_sequence[var->pos2] == var->residue2) &&
+               (amp_sequence[var->pos3] == var->residue3) &&
+               (seq_identical(seed_sequence, 0,
+                              amp_sequence, 0,
+                              var->pos1)) &&
+               (seq_identical(seed_sequence, var->pos1 + 1,
+                              amp_sequence, var->pos1 + 1,
+                              var->pos2 - var->pos1 - 1)) &&
+               (seq_identical(seed_sequence, var->pos2 + 1,
+                              amp_sequence,  var->pos2 + 1,
+                              var->pos3 - var->pos2 - 1)) &&
+               (seq_identical(seed_sequence, var->pos3 + 1,
+                              amp_sequence,  var->pos3 + 1,
+                              seed_seqlen - var->pos3 - 1)));
+      break;
+
     case del_del:
     case ins_ins:
     case sub_del:
@@ -368,6 +403,8 @@ inline void add_variant(uint64_t hash,
                         unsigned char residue1,
                         unsigned int pos2,
                         unsigned char residue2,
+                        unsigned int pos3,
+                        unsigned char residue3,
                         struct bloom_s * bloom,
                         struct hashtable_s * ht)
 {
@@ -406,10 +443,10 @@ inline void add_variant(uint64_t hash,
   v->residue1 = residue1;
   v->pos2 = pos2;
   v->residue2 = residue2;
+  v->pos3 = pos3;
+  v->residue3 = residue3;
 
 #ifdef DUMP
-
-#ifdef SMART
   char kindletters[] = "= s d i sssdsidsdddiisidii";
   unsigned char * mod = (unsigned char *) xmalloc(32);
   unsigned int modlen = 0;
@@ -433,13 +470,6 @@ inline void add_variant(uint64_t hash,
   printf("\n");
 
   xfree(mod);
-
-#else
-
-  printf("calc: %016llx\n", hash);
-
-#endif
-
 #endif
 }
 
@@ -461,7 +491,7 @@ void generate_variants_0(uint64_t hash,
   /* identical non-variant */
   add_variant(hash,
               variant_list, variant_count,
-              identical, 0, 0, 0, 0,
+              identical, 0, 0, 0, 0, 0, 0,
               bloom, ht);
 }
 
@@ -495,7 +525,7 @@ void generate_variants_1(uint64_t hash,
 
             add_variant(hash2,
                         variant_list, variant_count,
-                        substitution, i, v, 0, 0,
+                        substitution, i, v, 0, 0, 0, 0,
                         bloom, ht);
           }
     }
@@ -522,7 +552,7 @@ void generate_variants_1(uint64_t hash,
          d_gene);
       add_variant(hash,
                   variant_list, variant_count,
-                  deletion, 0, 0, 0, 0,
+                  deletion, 0, 0, 0, 0, 0, 0,
                   bloom, ht);
       unsigned char deleted = sequence[0];
       for(unsigned int i = 1; i < seqlen; i++)
@@ -534,7 +564,7 @@ void generate_variants_1(uint64_t hash,
                 ^ zobrist_value(i - 1, v);
               add_variant(hash,
                           variant_list, variant_count,
-                          deletion, i, 0, 0, 0,
+                          deletion, i, 0, 0, 0, 0, 0,
                           bloom, ht);
               deleted = v;
             }
@@ -560,7 +590,7 @@ void generate_variants_1(uint64_t hash,
           uint64_t hash1 = hash ^ zobrist_value(0, v);
           add_variant(hash1,
                       variant_list, variant_count,
-                      insertion, 0, v, 0, 0,
+                      insertion, 0, v, 0, 0, 0, 0,
                       bloom, ht);
         }
       for (unsigned int i = 0; i < seqlen; i++)
@@ -573,7 +603,7 @@ void generate_variants_1(uint64_t hash,
                 uint64_t hash1 = hash ^ zobrist_value(i + 1, v);
                 add_variant(hash1,
                             variant_list, variant_count,
-                            insertion, i + 1, v, 0, 0,
+                            insertion, i + 1, v, 0, 0, 0, 0,
                             bloom, ht);
               }
         }
@@ -582,6 +612,11 @@ void generate_variants_1(uint64_t hash,
 
     }
 }
+
+
+#if 0
+
+/* This code is experimental */
 
 void generate_variants_2_all(uint64_t hash,
                              unsigned char * sequence,
@@ -611,7 +646,7 @@ void generate_variants_2_all(uint64_t hash,
             uint64_t hash2 = hash1 ^ zobrist_value(i, v);
             add_variant(hash2,
                         variant_list, variant_count,
-                        substitution, i, v, 0, 0,
+                        substitution, i, v, 0, 0, 0, 0,
                         bloom, ht);
             mut[i] = v;
 
@@ -647,7 +682,7 @@ void generate_variants_2_all(uint64_t hash,
 
       add_variant(hash,
                   variant_list, variant_count,
-                  deletion, 0, 0, 0, 0,
+                  deletion, 0, 0, 0, 0, 0, 0,
                   bloom, ht);
 
 #ifdef DUMP
@@ -672,7 +707,7 @@ void generate_variants_2_all(uint64_t hash,
                 ^ zobrist_value(i - 1, v);
               add_variant(hash,
                           variant_list, variant_count,
-                          deletion, i, 0, 0, 0,
+                          deletion, i, 0, 0, 0, 0, 0,
                           bloom, ht);
               mut[i - 1] = sequence[i-1];
 
@@ -708,7 +743,7 @@ void generate_variants_2_all(uint64_t hash,
           uint64_t hash1 = hash ^ zobrist_value(0, v);
           add_variant(hash1,
                       variant_list, variant_count,
-                      insertion, 0, v, 0, 0,
+                      insertion, 0, v, 0, 0, 0, 0,
                       bloom, ht);
           mut[0] = v;
 
@@ -737,7 +772,7 @@ void generate_variants_2_all(uint64_t hash,
                 uint64_t hash1 = hash ^ zobrist_value(i + 1, v);
                 add_variant(hash1,
                             variant_list, variant_count,
-                            insertion, i + 1, v, 0, 0,
+                            insertion, i + 1, v, 0, 0, 0, 0,
                             bloom, ht);
                 mut[i + 1] = v;
 
@@ -761,22 +796,25 @@ void generate_variants_2_all(uint64_t hash,
   xfree(mut);
 }
 
-void generate_variants_2_smart(uint64_t hash,
-                               unsigned char * sequence,
-                               unsigned int seqlen,
-                               uint64_t v_gene,
-                               uint64_t d_gene,
-                               var_s * variant_list,
-                               unsigned int * variant_count,
-                               struct bloom_s * bloom,
-                               struct hashtable_s * ht)
+/* End experimental code */
+
+#endif
+
+
+void generate_variants_2(uint64_t hash,
+                         unsigned char * sequence,
+                         unsigned int seqlen,
+                         uint64_t v_gene,
+                         uint64_t d_gene,
+                         var_s * variant_list,
+                         unsigned int * variant_count,
+                         struct bloom_s * bloom,
+                         struct hashtable_s * ht)
 {
   (void) v_gene;
   (void) d_gene;
 
   /* generate all double substitutions */
-
-#if 1
 
   for (unsigned int i = 0; i < seqlen; i++)
     {
@@ -801,7 +839,7 @@ void generate_variants_2_smart(uint64_t hash,
                           uint64_t hash4 = hash3 ^ zobrist_value(j, w);
                           add_variant(hash4,
                                       variant_list, variant_count,
-                                      sub_sub, i, v, j, w,
+                                      sub_sub, i, v, j, w, 0, 0,
                                       bloom, ht);
                         }
                     }
@@ -810,7 +848,12 @@ void generate_variants_2_smart(uint64_t hash,
         }
     }
 
-#endif
+
+#if 0
+
+  /* The code below is not used */
+  /* Indels with d >= 2 is disabled */
+  /* It is not 100% correct */
 
   if (opt_indels)
     {
@@ -857,7 +900,7 @@ void generate_variants_2_smart(uint64_t hash,
                         {
                           add_variant(hash2,
                                       variant_list, variant_count,
-                                      del_del, i, 0, j, 0,
+                                      del_del, i, 0, j, 0, 0, 0,
                                       bloom, ht);
                         }
                     }
@@ -912,7 +955,7 @@ void generate_variants_2_smart(uint64_t hash,
                               uint64_t hash3 = hash2 ^ zobrist_value(j, v2);
                               add_variant(hash3,
                                           variant_list, variant_count,
-                                          ins_ins, i, v1, j, v2,
+                                          ins_ins, i, v1, j, v2, 0, 0,
                                           bloom, ht);
                             }
                         }
@@ -984,7 +1027,7 @@ void generate_variants_2_smart(uint64_t hash,
                                         ^ zobrist_value(j, sequence[p]);
                                       add_variant(hash3,
                                                   variant_list, variant_count,
-                                                  ins_sub, i, v1, j, v2,
+                                                  ins_sub, i, v1, j, v2, 0, 0,
                                                   bloom, ht);
                                     }
                                 }
@@ -1065,7 +1108,7 @@ void generate_variants_2_smart(uint64_t hash,
                                 ^ zobrist_value(p, sequence[j]);
                               add_variant(hash2,
                                           variant_list, variant_count,
-                                          del_sub, i, 0, p, v2,
+                                          del_sub, i, 0, p, v2, 0, 0,
                                           bloom, ht);
                             }
                         }
@@ -1121,7 +1164,7 @@ void generate_variants_2_smart(uint64_t hash,
                           uint64_t hash3 = hash2 ^ zobrist_value(j, v);
                           add_variant(hash3,
                                       variant_list, variant_count,
-                                      del_ins, i, 0, j, v,
+                                      del_ins, i, 0, j, v, 0, 0,
                                       bloom, ht);
                         }
                     }
@@ -1131,6 +1174,68 @@ void generate_variants_2_smart(uint64_t hash,
 
 #endif
 
+    }
+
+#endif
+
+  /* End experimental code */
+
+}
+
+
+void generate_variants_3(uint64_t hash,
+                         unsigned char * sequence,
+                         unsigned int seqlen,
+                         uint64_t v_gene,
+                         uint64_t d_gene,
+                         var_s * variant_list,
+                         unsigned int * variant_count,
+                         struct bloom_s * bloom,
+                         struct hashtable_s * ht)
+{
+  (void) v_gene;
+  (void) d_gene;
+
+  /* generate all triple substitutions */
+
+  for (unsigned int i = 0; i < seqlen - 2; i++)
+    {
+      unsigned char res1 = sequence[i];
+      uint64_t hash1 = hash ^ zobrist_value(i, res1);
+
+      for (unsigned char v = 0; v < alphabet_size; v++)
+        if (v != res1)
+          {
+            uint64_t hash2 = hash1 ^ zobrist_value(i, v);
+
+            for (unsigned int j = i + 1; j < seqlen - 1; j++)
+              {
+                unsigned char res2 = sequence[j];
+                uint64_t hash3 = hash2 ^ zobrist_value(j, res2);
+
+                for (unsigned char w = 0; w < alphabet_size; w++)
+                  if (w != res2)
+                    {
+                      uint64_t hash4 = hash3 ^ zobrist_value(j, w);
+
+                      for (unsigned int k = j + 1; k < seqlen; k++)
+                        {
+                          unsigned char res3 = sequence[k];
+                          uint64_t hash5 = hash4 ^ zobrist_value(k, res3);
+
+                          for (unsigned char x = 0; x < alphabet_size; x++)
+                            if (x != res3)
+                              {
+                                uint64_t hash6 = hash5 ^ zobrist_value(k, x);
+                                add_variant(hash6,
+                                            variant_list, variant_count,
+                                            sub_sub_sub, i, v, j, w, k, x,
+                                            bloom, ht);
+                              }
+                        }
+                    }
+              }
+          }
     }
 }
 
@@ -1173,40 +1278,13 @@ void generate_variants(uint64_t hash,
   struct hashtable_s * ht = nullptr;
 #endif
 
-#if 1
   generate_variants_0(hash,
                       sequence, seqlen,
                       v_gene, d_gene,
                       variant_list, variant_count,
                       bloom, ht);
-#endif
 
-  if (opt_differences > 1)
-    {
-#ifdef SMART
-
-#if 1
-      generate_variants_1(hash,
-                          sequence, seqlen,
-                          v_gene, d_gene,
-                          variant_list, variant_count,
-                          bloom, ht);
-#endif
-
-      generate_variants_2_smart(hash,
-                                sequence, seqlen,
-                                v_gene, d_gene,
-                                variant_list, variant_count,
-                                bloom, ht);
-#else
-      generate_variants_2_all(hash,
-                              sequence, seqlen,
-                              v_gene, d_gene,
-                              variant_list, variant_count,
-                              bloom, ht);
-#endif
-    }
-  else if (opt_differences > 0)
+  if (opt_differences >= 1)
     {
       generate_variants_1(hash,
                           sequence, seqlen,
@@ -1214,14 +1292,23 @@ void generate_variants(uint64_t hash,
                           variant_list, variant_count,
                           bloom, ht);
     }
-  else if (opt_differences < 0)
+
+  if (opt_differences >= 2)
     {
-      /* dummy */
-      generate_variants_2_smart(hash,
-                                sequence, seqlen,
-                                v_gene, d_gene,
-                                variant_list, variant_count,
-                                bloom, ht);
+      generate_variants_2(hash,
+                          sequence, seqlen,
+                          v_gene, d_gene,
+                          variant_list, variant_count,
+                          bloom, ht);
+    }
+
+  if (opt_differences >= 3)
+    {
+      generate_variants_3(hash,
+                          sequence, seqlen,
+                          v_gene, d_gene,
+                          variant_list, variant_count,
+                          bloom, ht);
     }
 
 #ifdef USEHASH

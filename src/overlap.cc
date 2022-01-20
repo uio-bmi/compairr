@@ -689,7 +689,7 @@ void overlap(char * set1_filename, char * set2_filename)
   unsigned int overall_longest = MAX(set1_longestsequence,
                                      set2_longestsequence);
 
-  zobrist_init(overall_longest + 2,
+  zobrist_init(overall_longest + MAX_INSERTS,
                db_get_v_gene_count(),
                db_get_j_gene_count());
 

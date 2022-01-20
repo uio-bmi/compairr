@@ -161,8 +161,8 @@ void args_usage()
   fprintf(stderr, " -c, --cluster               cluster sequences in one repertoire\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
-  fprintf(stderr, " -d, --differences INTEGER   number (0-2) of differences accepted (0)\n");
-  fprintf(stderr, " -i, --indels                allow insertions or deletions\n");
+  fprintf(stderr, " -d, --differences INTEGER   number (0-3) of differences accepted (0)\n");
+  fprintf(stderr, " -i, --indels                allow insertions or deletions when d=1\n");
   fprintf(stderr, " -f, --ignore-counts         ignore duplicate_count information\n");
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
   fprintf(stderr, " -n, --nucleotides           compare nucleotides, not amino acids\n");
@@ -430,8 +430,8 @@ void args_init(int argc, char **argv)
       exit(1);
     }
 
-  if ((opt_differences < 0) || (opt_differences > 2))
-    fatal("Differences specifed with -d or -differences must be 0, 1 or 2.");
+  if ((opt_differences < 0) || (opt_differences > 3))
+    fatal("Differences specifed with -d or -differences must be 0, 1, 2 or 3.");
 
   if (opt_indels && (opt_differences != 1))
     fatal("Indels are only allowed when d=1");

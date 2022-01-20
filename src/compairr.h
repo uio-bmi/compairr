@@ -108,6 +108,8 @@ static_assert(INT_MAX > 32767, "Your compiler uses very short integers.");
 
 const unsigned int MAX_THREADS = 256;
 
+const int MAX_INSERTS = 3;
+
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
