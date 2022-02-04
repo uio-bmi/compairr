@@ -545,28 +545,31 @@ void generate_variants_1(uint64_t hash,
       printf("1del\n");
 #endif
 
-      hash = zobrist_hash_delete_first
-        (reinterpret_cast<unsigned char *> (sequence),
-         seqlen,
-         v_gene,
-         d_gene);
-      add_variant(hash,
-                  variant_list, variant_count,
-                  deletion, 0, 0, 0, 0, 0, 0,
-                  bloom, ht);
-      unsigned char deleted = sequence[0];
-      for(unsigned int i = 1; i < seqlen; i++)
+      if (seqlen > 1)
         {
-          unsigned char v = sequence[i];
-          if (v != deleted)
+          hash = zobrist_hash_delete_first
+            (reinterpret_cast<unsigned char *> (sequence),
+             seqlen,
+             v_gene,
+             d_gene);
+          add_variant(hash,
+                      variant_list, variant_count,
+                      deletion, 0, 0, 0, 0, 0, 0,
+                      bloom, ht);
+          unsigned char deleted = sequence[0];
+          for(unsigned int i = 1; i < seqlen; i++)
             {
-              hash ^= zobrist_value(i - 1, deleted)
-                ^ zobrist_value(i - 1, v);
-              add_variant(hash,
-                          variant_list, variant_count,
-                          deletion, i, 0, 0, 0, 0, 0,
-                          bloom, ht);
-              deleted = v;
+              unsigned char v = sequence[i];
+              if (v != deleted)
+                {
+                  hash ^= zobrist_value(i - 1, deleted)
+                    ^ zobrist_value(i - 1, v);
+                  add_variant(hash,
+                              variant_list, variant_count,
+                              deletion, i, 0, 0, 0, 0, 0,
+                              bloom, ht);
+                  deleted = v;
+                }
             }
         }
 
@@ -670,6 +673,7 @@ void generate_variants_2_all(uint64_t hash,
   if (opt_indels)
     {
       /* deletions */
+      /* remember to check that seqlen is at least 2 for double deletions */
 
       mutlen = seqlen - 1;
       memcpy(mut, sequence + 1, mutlen);
@@ -1198,7 +1202,7 @@ void generate_variants_3(uint64_t hash,
 
   /* generate all triple substitutions */
 
-  for (unsigned int i = 0; i < seqlen - 2; i++)
+  for (unsigned int i = 0; i + 2 < seqlen; i++)
     {
       unsigned char res1 = sequence[i];
       uint64_t hash1 = hash ^ zobrist_value(i, res1);
@@ -1208,7 +1212,7 @@ void generate_variants_3(uint64_t hash,
           {
             uint64_t hash2 = hash1 ^ zobrist_value(i, v);
 
-            for (unsigned int j = i + 1; j < seqlen - 1; j++)
+            for (unsigned int j = i + 1; j + 1 < seqlen; j++)
               {
                 unsigned char res2 = sequence[j];
                 uint64_t hash3 = hash2 ^ zobrist_value(j, res2);
