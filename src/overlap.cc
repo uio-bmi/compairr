@@ -57,8 +57,6 @@ typedef struct pair_s
   uint64_t seq[2];
 } pair_t;
 
-//#define AVOID_DUPLICATES 1
-
 const uint64_t CHUNK = 1000;
 const char * empty_string = "";
 
@@ -77,51 +75,50 @@ static inline void hash_insert_overlap(uint64_t rearr)
   bloom_set(bloom_a, hash);
 }
 
-int set1_compare_by_repertoire_name(const void * a, const void * b)
+static int set1_compare_by_repertoire_name(const void * a, const void * b)
 {
   const unsigned int * x = (const unsigned int *) a;
   const unsigned int * y = (const unsigned int *) b;
   return strcmp(db_get_repertoire_id(d1, *x), db_get_repertoire_id(d1, *y));
 }
 
-int set2_compare_by_repertoire_name(const void * a, const void * b)
+static int set2_compare_by_repertoire_name(const void * a, const void * b)
 {
   const unsigned int * x = (const unsigned int *) a;
   const unsigned int * y = (const unsigned int *) b;
   return strcmp(db_get_repertoire_id(d2, *x), db_get_repertoire_id(d2, *y));
 }
 
-inline m_val_t compute_summand(uint64_t a, uint64_t b)
+static inline m_val_t compute_score(uint64_t a, uint64_t b)
 {
   if (opt_ignore_counts)
     return 1;
   else
-    switch(opt_summands_int)
+    switch(opt_score_int)
       {
-      case summands_mh:
-      case summands_product:
+      case score_mh:
+      case score_product:
         return (m_val_t)(a) * (m_val_t)(b);
-      case summands_ratio:
+      case score_ratio:
         return (m_val_t)(a) / (m_val_t)(b);
-      case summands_jaccard:
-      case summands_min:
+      case score_jaccard:
+      case score_min:
         return MIN(a, b);
-      case summands_max:
+      case score_max:
         return MAX(a, b);
-      case summands_mean:
+      case score_mean:
         return ((m_val_t)(a) + (m_val_t)(b)) / 2;
       default:
         fatal("Internal error");
       }
 }
 
-void find_variant_matches(uint64_t seed,
-                          var_s * var,
-                          m_val_t * repertoire_matrix,
-                          struct bloom_s * bloom_d,
-                          uint64_t * pairs_alloc,
-                          uint64_t * pairs_count,
-                          struct pair_s * * pairs_list)
+static void find_variant_matches(uint64_t seed,
+                                 var_s * var,
+                                 m_val_t * repertoire_matrix,
+                                 uint64_t * pairs_alloc,
+                                 uint64_t * pairs_count,
+                                 struct pair_s * * pairs_list)
 {
   /* compute hash and corresponding hash table index */
 
@@ -164,7 +161,7 @@ void find_variant_matches(uint64_t seed,
                   uint64_t f = db_get_count(d1, seed);
                   uint64_t g = db_get_count(d2, hit);
 
-                  m_val_t s = compute_summand(f, g);
+                  m_val_t s = compute_score(f, g);
 
                   if (opt_matrix)
                     {
@@ -191,9 +188,6 @@ void find_variant_matches(uint64_t seed,
                       struct pair_s p = { seed, hit };
                       (*pairs_list)[(*pairs_count)++] = p;
                     }
-
-                  if (bloom_d)
-                    bloom_set(bloom_d, var->hash);
                 }
             }
         }
@@ -201,12 +195,12 @@ void find_variant_matches(uint64_t seed,
     }
 }
 
-void process_variants(uint64_t seed,
-                      var_s * variant_list,
-                      m_val_t * repertoire_matrix,
-                      uint64_t * pairs_alloc,
-                      uint64_t * pairs_count,
-                      struct pair_s * * pairs_list)
+static void process_variants(uint64_t seed,
+                             var_s * variant_list,
+                             m_val_t * repertoire_matrix,
+                             uint64_t * pairs_alloc,
+                             uint64_t * pairs_count,
+                             struct pair_s * * pairs_list)
 {
   unsigned int variant_count = 0;
   unsigned char * sequence = (unsigned char *) db_getsequence(d1, seed);
@@ -227,7 +221,6 @@ void process_variants(uint64_t seed,
           find_variant_matches(seed,
                                var,
                                repertoire_matrix,
-                               nullptr,
                                pairs_alloc,
                                pairs_count,
                                pairs_list);
@@ -235,97 +228,94 @@ void process_variants(uint64_t seed,
     }
 }
 
-void process_variants_avoid_duplicates(uint64_t seed,
-                                       var_s * variant_list,
-                                       m_val_t * repertoire_matrix,
-                                       struct bloom_s * bloom_d,
-                                       uint64_t * pairs_alloc,
-                                       uint64_t * pairs_count,
-                                       struct pair_s * * pairs_list)
+static void process_trad(uint64_t seed,
+                         m_val_t * repertoire_matrix,
+                         uint64_t * pairs_alloc,
+                         uint64_t * pairs_count,
+                         struct pair_s * * pairs_list)
 {
-  unsigned int variant_count = 0;
-  unsigned char * sequence = (unsigned char *) db_getsequence(d1, seed);
-  unsigned int seqlen = db_getsequencelen(d1, seed);
-  uint64_t hash = db_gethash(d1, seed);
-  uint64_t v_gene = db_get_v_gene(d1, seed);
-  uint64_t j_gene = db_get_j_gene(d1, seed);
+  /* Only to be used with no indels (and d >= 3) */
 
-  generate_variants(hash,
-                    sequence, seqlen, v_gene, j_gene,
-                    variant_list, & variant_count);
-
-  bloom_zap(bloom_d);
-
-  for(unsigned int i = 0; i < variant_count; i++)
+  for (uint64_t hit = 0; hit < set2_sequences; hit++)
     {
-      var_s * var = variant_list + i;
+      /* check if everything matches */
 
-      if (bloom_get(bloom_a, var->hash))
+      unsigned int seed_v_gene = db_get_v_gene(d1, seed);
+      unsigned int seed_j_gene = db_get_j_gene(d1, seed);
+
+      unsigned int hit_v_gene = db_get_v_gene(d2, hit);
+      unsigned int hit_j_gene = db_get_j_gene(d2, hit);
+
+      if (opt_ignore_genes ||
+          ((seed_v_gene == hit_v_gene) && (seed_j_gene == hit_j_gene)))
         {
+          unsigned int seed_seqlen = db_getsequencelen(d1, seed);
+          unsigned int hit_seqlen = db_getsequencelen(d2, hit);
 
-          /* Check for potential duplicate variants due to limitations */
-          /* in the variant generation algorithm.                      */
-          /* We only care about those duplicate that match the target. */
-
-          bool dup = false;
-
-          if (bloom_get(bloom_d, var->hash))
+          if (seed_seqlen == hit_seqlen)
             {
-              /* check if there is a real duplicate */
+              unsigned char * seed_sequence
+                = (unsigned char *) db_getsequence(d1, seed);
+              unsigned char * hit_sequence
+                = (unsigned char *) db_getsequence(d2, hit);
 
-              printf("Potential duplicate variant!\n");
+              if (seq_diff(seed_sequence, hit_sequence, seed_seqlen)
+                  <= opt_differences)
+              {
+                unsigned int i = db_get_repertoire_id_no(d1, seed);
+                unsigned int j = db_get_repertoire_id_no(d2, hit);
+                uint64_t f = db_get_count(d1, seed);
+                uint64_t g = db_get_count(d2, hit);
 
-              unsigned char * seq1 = (unsigned char*) xmalloc(seqlen + 3);
-              unsigned char * seq2 = (unsigned char*) xmalloc(seqlen + 3);
+                m_val_t s = compute_score(f, g);
 
-              for (unsigned int j = 0; j < i; j++)
-                {
-                  struct var_s * v = variant_list + j;
+                if (opt_matrix)
+                  {
+                    repertoire_matrix[set2_repertoires * i + j] += s;
+                  }
+                else
+                  {
+                    repertoire_matrix[set2_repertoires * seed + j] += s;
+                  }
 
-                  if (var->hash == v->hash)
-                    {
-                      printf("Likely duplicate variant!\n");
-                      unsigned int seq1len, seq2len;
-                      generate_variant_sequence(sequence,
-                                                seqlen,
-                                                var,
-                                                seq1,
-                                                & seq1len);
+                all_matches++;
 
-                      generate_variant_sequence(sequence,
-                                                seqlen,
-                                                var,
-                                                seq2,
-                                                & seq2len);
+                if (opt_pairs)
+                  {
+                    /* allocate more memory if needed */
+                    if (*pairs_count >= *pairs_alloc)
+                      {
+                        * pairs_alloc = 2 * (* pairs_alloc);
+                        * pairs_list = static_cast<struct pair_s *>
+                          (xrealloc(* pairs_list,
+                                    (*pairs_alloc) * sizeof(struct pair_s)));
+                      }
 
-                      if ((seq1len == seq2len) &&
-                          ! memcmp(seq1, seq2, seq1len))
-                        {
-                          /* we have a true duplicate variant */
-                          printf("Real duplicate variant!\n");
-                          dup = true;
-                          break;
-                        }
-                    }
-                }
-
-              xfree(seq1);
-              xfree(seq2);
+                    struct pair_s p = { seed, hit };
+                    (*pairs_list)[(*pairs_count)++] = p;
+                  }
+              }
             }
-
-          if (!dup)
-            find_variant_matches(seed,
-                                 var,
-                                 repertoire_matrix,
-                                 bloom_d,
-                                 pairs_alloc,
-                                 pairs_count,
-                                 pairs_list);
         }
     }
 }
 
-void sim_thread(int64_t t)
+static void process_seq(uint64_t seed,
+                        var_s * variant_list,
+                        m_val_t * repertoire_matrix,
+                        uint64_t * pairs_alloc,
+                        uint64_t * pairs_count,
+                        struct pair_s * * pairs_list)
+{
+  if (opt_differences > MAXDIFF_HASH)
+    process_trad(seed, repertoire_matrix,
+                 pairs_alloc, pairs_count, pairs_list);
+  else
+    process_variants(seed, variant_list, repertoire_matrix,
+                     pairs_alloc, pairs_count, pairs_list);
+}
+
+static void sim_thread(int64_t t)
 {
   (void) t;
 
@@ -341,14 +331,6 @@ void sim_thread(int64_t t)
 
   struct var_s * variant_list = static_cast<struct var_s *>
     (xmalloc(maxvar * sizeof(struct var_s)));
-
-#ifdef AVOID_DUPLICATES
-  /* init bloom filter for duplicates */
-  uint64_t bloomsize = 1;
-  while (bloomsize < maxvar)
-    bloomsize *= 2;
-  struct bloom_s * bloom_d = bloom_init(bloomsize);
-#endif
 
   m_val_t * repertoire_matrix_local = nullptr;
   if (opt_threads > 1)
@@ -394,24 +376,14 @@ void sim_thread(int64_t t)
       for (uint64_t z = 0; z < chunksize; z++)
         {
           uint64_t seed = firstseed + z;
-#ifdef AVOID_DUPLICATES
-          process_variants_avoid_duplicates
-            (seed,
-             variant_list,
-             opt_threads > 1 ? repertoire_matrix_local : repertoire_matrix,
-             bloom_d,
-             & pairs_alloc,
-             & pairs_count,
-             & pairs_list);
-#else
-          process_variants
-            (seed,
-             variant_list,
-             opt_threads > 1 ? repertoire_matrix_local : repertoire_matrix,
-             & pairs_alloc,
-             & pairs_count,
-             & pairs_list);
-#endif
+          process_seq(seed,
+                      variant_list,
+                      (opt_threads > 1 ?
+                       repertoire_matrix_local :
+                       repertoire_matrix),
+                      & pairs_alloc,
+                      & pairs_count,
+                      & pairs_list);
         }
 
       if (opt_threads > 1)
@@ -473,25 +445,21 @@ void sim_thread(int64_t t)
       xfree(repertoire_matrix_local);
     }
 
-#ifdef AVOID_DUPLICATES
-  bloom_exit(bloom_d);
-#endif
-
   xfree(variant_list);
 
   if (opt_pairs)
     xfree(pairs_list);
 }
 
-void show_matrix_value(unsigned int s, unsigned int t)
+static void show_matrix_value(unsigned int s, unsigned int t)
 {
   double SP, LX, LY, XY, MH;
   double SM, SA, SB, JI;
   double X;
 
-  switch (opt_summands_int)
+  switch (opt_score_int)
     {
-    case summands_mh:
+    case score_mh:
       /* Morisita-Horn index */
       /* Uses sum of product */
       SP = repertoire_matrix[set2_repertoires * s + t];
@@ -505,7 +473,7 @@ void show_matrix_value(unsigned int s, unsigned int t)
       fprintf(outfile, "\t%.10lg", MH);
       break;
 
-    case summands_jaccard:
+    case score_jaccard:
       /* Jaccard index */
       /* Uses sum of min */
       SM = repertoire_matrix[set2_repertoires * s + t];
@@ -750,10 +718,6 @@ void overlap(char * set1_filename, char * set2_filename)
   unsigned int overall_longest = MAX(set1_longestsequence,
                                      set2_longestsequence);
 
-  zobrist_init(overall_longest + MAX_INSERTS,
-               db_get_v_gene_count(),
-               db_get_j_gene_count());
-
   fprintf(logfile, "Unique V genes:    %" PRIu64 "\n",
           db_get_v_gene_count());
 
@@ -762,23 +726,30 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /* compute hashes for each sequence in database */
 
-  db_hash(d1);
-  if (d2 != d1)
-    db_hash(d2);
-
-  /* compute hash for all sequences and store them in a hash table */
-  /* use an additional bloom filter for increased speed */
-  /* hashing into hash table & bloom filter */
-
-  hashtable = hash_init(set2_sequences);
-  bloom_a = bloom_init(hash_get_tablesize(hashtable));
-  progress_init("Hashing sequences:", set2_sequences);
-  for(uint64_t i=0; i < set2_sequences; i++)
+  if (opt_differences <= MAXDIFF_HASH)
     {
-      hash_insert_overlap(i);
-      progress_update(i);
+      zobrist_init(overall_longest + MAX_INSERTS,
+                   db_get_v_gene_count(),
+                   db_get_j_gene_count());
+
+      db_hash(d1);
+      if (d2 != d1)
+        db_hash(d2);
+
+      /* compute hash for all sequences and store them in a hash table */
+      /* use an additional bloom filter for increased speed */
+      /* hashing into hash table & bloom filter */
+
+      hashtable = hash_init(set2_sequences);
+      bloom_a = bloom_init(hash_get_tablesize(hashtable));
+      progress_init("Hashing sequences:", set2_sequences);
+      for(uint64_t i=0; i < set2_sequences; i++)
+        {
+          hash_insert_overlap(i);
+          progress_update(i);
+        }
+      progress_done();
     }
-  progress_done();
 
   if (opt_matrix)
     {
@@ -937,11 +908,12 @@ void overlap(char * set1_filename, char * set2_filename)
     xfree(repertoire_matrix);
   repertoire_matrix = nullptr;
 
-  bloom_exit(bloom_a);
-
-  hash_exit(hashtable);
-
-  zobrist_exit();
+  if (opt_differences <= MAXDIFF_HASH)
+    {
+      bloom_exit(bloom_a);
+      hash_exit(hashtable);
+      zobrist_exit();
+    }
 
   if (d1 != d2)
     {

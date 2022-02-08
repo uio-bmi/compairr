@@ -32,3 +32,4 @@ void progress_update(uint64_t progress);
 void progress_done();
 FILE * fopen_input(const char * filename);
 FILE * fopen_output(const char * filename);
+int64_t seq_diff(unsigned char * a, unsigned char * b, int64_t len);

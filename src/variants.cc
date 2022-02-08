@@ -21,22 +21,6 @@
 
 #include "compairr.h"
 
-//#define DUMP 1
-//#define USEBLOOM 1
-//#define USEHASH 1
-//#define HASHSTATS 1
-
-#ifdef HASHSTATS
-static uint64_t tries = 0;
-#endif
-
-#ifdef DUMP
-static unsigned char * dump_seed_sequence;
-static unsigned int dump_seed_seqlen;
-static uint64_t dump_v_gene;
-static uint64_t dump_d_gene;
-#endif
-
 void ps(unsigned int seqlen, unsigned char * sequence)
 {
   char ab[] = "ACDEFGHIKLMNPQRSTVWY";
@@ -119,20 +103,6 @@ uint64_t max_variants(uint64_t longest)
         }
     }
 
-  if (opt_differences >= 3)
-    {
-      // d = 3
-      // substitutions
-      maxvar += longest * (longest - 1) * (longest - 2) / 6 *
-        (alphabet_size - 1) * (alphabet_size - 1) * (alphabet_size - 1);
-
-      if (opt_indels)
-        {
-          // deletions & insertions
-          fatal("Indels not supported for d>1");
-        }
-    }
-
   return maxvar;
 }
 
@@ -185,100 +155,6 @@ void generate_variant_sequence(unsigned char * seed_sequence,
       * seqlen = seed_seqlen;
       break;
 
-    case del_del:
-      seq_copy(seq, 0,
-               seed_sequence, 0,
-               var->pos1);
-      seq_copy(seq, var->pos1,
-               seed_sequence, var->pos1 + 1,
-               var->pos2 - var->pos1 - 1);
-      seq_copy(seq, var->pos2 - 1,
-               seed_sequence, var->pos2 + 1,
-               seed_seqlen - var->pos2 - 1);
-      * seqlen = seed_seqlen - 2;
-      break;
-
-    case ins_ins:
-      seq_copy(seq, 0,
-               seed_sequence, 0,
-               var->pos1);
-      seq[var->pos1] = var->residue1;
-      seq_copy(seq, var->pos1 + 1,
-               seed_sequence, var->pos1,
-               var->pos2 - var->pos1 - 1);
-      seq[var->pos2] = var->residue2;
-      seq_copy(seq, var->pos2 + 1,
-               seed_sequence, var->pos2 - 1,
-               seed_seqlen - var->pos2 + 1);
-      * seqlen = seed_seqlen + 2;
-      break;
-
-    case ins_sub:
-      seq_copy(seq, 0,
-               seed_sequence, 0,
-               var->pos1);
-      seq_copy(seq, var->pos1 + 1,
-               seed_sequence, var->pos1,
-               seed_seqlen - var->pos1);
-      seq[var->pos1] = var->residue1;
-      seq[var->pos2] = var->residue2;
-      * seqlen = seed_seqlen + 1;
-      break;
-
-    case del_sub:
-      seq_copy(seq, 0,
-               seed_sequence, 0,
-               var->pos1);
-      seq_copy(seq, var->pos1,
-               seed_sequence, var->pos1 + 1,
-               seed_seqlen - var->pos1 - 1);
-      seq[var->pos2] = var->residue2;
-      * seqlen = seed_seqlen - 1;
-      break;
-
-    case del_ins:
-      if (var->pos1 <= var->pos2)
-        {
-          // deletion left of insertion
-          seq_copy(seq, 0,
-                   seed_sequence, 0,
-                   var->pos1);
-          seq_copy(seq, var->pos1,
-                   seed_sequence, var->pos1 + 1,
-                   var->pos2 - var->pos1);
-          seq_copy(seq, var->pos2 + 1,
-                   seed_sequence, var->pos2 + 1,
-                   seed_seqlen - var->pos2 - 1);
-          seq[var->pos2] = var->residue2;
-        }
-      else
-        {
-          // insertion left of deletion
-          seq_copy(seq, 0,
-                   seed_sequence, 0,
-                   var->pos2);
-          seq_copy(seq, var->pos2 + 1,
-                   seed_sequence, var->pos2,
-                   var->pos1 - var->pos2);
-          seq_copy(seq, var->pos1 + 1,
-                   seed_sequence, var->pos1 + 1,
-                   seed_seqlen - var->pos1 - 1);
-          seq[var->pos2] = var->residue2;
-        }
-      * seqlen = seed_seqlen;
-      break;
-
-    case sub_sub_sub:
-      seq_copy(seq, 0, seed_sequence, 0, seed_seqlen);
-      seq[var->pos1] = var->residue1;
-      seq[var->pos2] = var->residue2;
-      seq[var->pos3] = var->residue3;
-      * seqlen = seed_seqlen;
-      break;
-
-    case sub_del:
-    case sub_ins:
-    case ins_del:
     default:
       fatal("Internal error");
       break;
@@ -354,43 +230,11 @@ bool check_variant(unsigned char * seed_sequence,
                               seed_seqlen - var->pos2 - 1)));
       break;
 
-    case sub_sub_sub:
-      equal = ((seed_seqlen == amp_seqlen) &&
-               (amp_sequence[var->pos1] == var->residue1) &&
-               (amp_sequence[var->pos2] == var->residue2) &&
-               (amp_sequence[var->pos3] == var->residue3) &&
-               (seq_identical(seed_sequence, 0,
-                              amp_sequence, 0,
-                              var->pos1)) &&
-               (seq_identical(seed_sequence, var->pos1 + 1,
-                              amp_sequence, var->pos1 + 1,
-                              var->pos2 - var->pos1 - 1)) &&
-               (seq_identical(seed_sequence, var->pos2 + 1,
-                              amp_sequence,  var->pos2 + 1,
-                              var->pos3 - var->pos2 - 1)) &&
-               (seq_identical(seed_sequence, var->pos3 + 1,
-                              amp_sequence,  var->pos3 + 1,
-                              seed_seqlen - var->pos3 - 1)));
-      break;
-
-    case del_del:
-    case ins_ins:
-    case sub_del:
-    case sub_ins:
-    case del_sub:
-    case ins_sub:
-    case ins_del:
-    case del_ins:
     default:
       fatal("Internal error");
       break;
 
     }
-
-#if 0
-  if (!equal)
-    fatal("Hash collision!\n");
-#endif
 
   return equal;
 }
@@ -402,40 +246,8 @@ inline void add_variant(uint64_t hash,
                         unsigned int pos1,
                         unsigned char residue1,
                         unsigned int pos2,
-                        unsigned char residue2,
-                        unsigned int pos3,
-                        unsigned char residue3,
-                        struct bloom_s * bloom,
-                        struct hashtable_s * ht)
+                        unsigned char residue2)
 {
-  (void) bloom;
-
-#ifdef HASHSTATS
-  tries++;
-#endif
-
-#ifdef USEBLOOM
-  if (bloom_get(bloom, hash))
-    printf("BLOOM HIT!\n");
-#endif
-
-  // check hash table
-
-#ifdef USEHASH
-  uint64_t j = hash_getindex(ht, hash);
-  while (hash_is_occupied(ht, j))
-    {
-      if (hash_compare_value(ht, j, hash))
-        return;
-      j = hash_getnextindex(ht, j);
-    }
-
-  hash_set_occupied(ht, j);
-  hash_set_value(ht, j, hash);
-#else
-  (void) ht;
-#endif
-
   var_s * v = variant_list + (*variant_count)++;
   v->hash = hash;
   v->kind = kind;
@@ -443,56 +255,16 @@ inline void add_variant(uint64_t hash,
   v->residue1 = residue1;
   v->pos2 = pos2;
   v->residue2 = residue2;
-  v->pos3 = pos3;
-  v->residue3 = residue3;
-
-#ifdef DUMP
-  char kindletters[] = "= s d i sssdsidsdddiisidii";
-  unsigned char * mod = (unsigned char *) xmalloc(32);
-  unsigned int modlen = 0;
-  generate_variant_sequence(dump_seed_sequence,
-                            dump_seed_seqlen,
-                            v,
-                            mod,
-                            & modlen);
-
-  uint64_t newhash = zobrist_hash(mod, modlen, dump_v_gene, dump_d_gene);
-
-  printf("calc: %016llx correct: %016llx", hash, newhash);
-  printf(" %.2s", kindletters + 2 * kind);
-  printf(" pos: %2d,%2d res: ", pos1, pos2);
-  ps(1, &residue1);
-  ps(1, &residue2);
-  printf(" ");
-  ps(modlen, mod);
-  if (hash != newhash)
-    printf(" !!!");
-  printf("\n");
-
-  xfree(mod);
-#endif
 }
 
 void generate_variants_0(uint64_t hash,
-                         unsigned char * sequence,
-                         unsigned int seqlen,
-                         uint64_t v_gene,
-                         uint64_t d_gene,
                          var_s * variant_list,
-                         unsigned int * variant_count,
-                         struct bloom_s * bloom,
-                         struct hashtable_s * ht)
+                         unsigned int * variant_count)
 {
-  (void) sequence;
-  (void) seqlen;
-  (void) v_gene;
-  (void) d_gene;
-
   /* identical non-variant */
   add_variant(hash,
               variant_list, variant_count,
-              identical, 0, 0, 0, 0, 0, 0,
-              bloom, ht);
+              identical, 0, 0, 0, 0);
 }
 
 void generate_variants_1(uint64_t hash,
@@ -501,13 +273,8 @@ void generate_variants_1(uint64_t hash,
                          uint64_t v_gene,
                          uint64_t d_gene,
                          var_s * variant_list,
-                         unsigned int * variant_count,
-                         struct bloom_s * bloom,
-                         struct hashtable_s * ht)
+                         unsigned int * variant_count)
 {
-
-#if 1
-
   /* substitutions */
 
   for(unsigned int i = 0; i < seqlen; i++)
@@ -519,31 +286,17 @@ void generate_variants_1(uint64_t hash,
           {
             uint64_t hash2 = hash1 ^ zobrist_value(i, v);
 
-#ifdef DUMP
-            printf("subst %d %d\n", i, v);
-#endif
-
             add_variant(hash2,
                         variant_list, variant_count,
-                        substitution, i, v, 0, 0, 0, 0,
-                        bloom, ht);
+                        substitution, i, v, 0, 0);
           }
     }
-
-#endif
 
   /* indels */
 
   if (opt_indels)
     {
-
-#if 1
-
       /* deletions */
-
-#ifdef DUMP
-      printf("1del\n");
-#endif
 
       if (seqlen > 1)
         {
@@ -554,8 +307,7 @@ void generate_variants_1(uint64_t hash,
              d_gene);
           add_variant(hash,
                       variant_list, variant_count,
-                      deletion, 0, 0, 0, 0, 0, 0,
-                      bloom, ht);
+                      deletion, 0, 0, 0, 0);
           unsigned char deleted = sequence[0];
           for(unsigned int i = 1; i < seqlen; i++)
             {
@@ -566,22 +318,13 @@ void generate_variants_1(uint64_t hash,
                     ^ zobrist_value(i - 1, v);
                   add_variant(hash,
                               variant_list, variant_count,
-                              deletion, i, 0, 0, 0, 0, 0,
-                              bloom, ht);
+                              deletion, i, 0, 0, 0);
                   deleted = v;
                 }
             }
         }
 
-#endif
-
-#if 1
-
       /* insertions */
-
-#ifdef DUMP
-      printf("1ins\n");
-#endif
 
       hash = zobrist_hash_insert_first
         (reinterpret_cast<unsigned char *>(sequence),
@@ -593,8 +336,7 @@ void generate_variants_1(uint64_t hash,
           uint64_t hash1 = hash ^ zobrist_value(0, v);
           add_variant(hash1,
                       variant_list, variant_count,
-                      insertion, 0, v, 0, 0, 0, 0,
-                      bloom, ht);
+                      insertion, 0, v, 0, 0);
         }
       for (unsigned int i = 0; i < seqlen; i++)
         {
@@ -606,204 +348,11 @@ void generate_variants_1(uint64_t hash,
                 uint64_t hash1 = hash ^ zobrist_value(i + 1, v);
                 add_variant(hash1,
                             variant_list, variant_count,
-                            insertion, i + 1, v, 0, 0, 0, 0,
-                            bloom, ht);
+                            insertion, i + 1, v, 0, 0);
               }
         }
-
-#endif
-
     }
 }
-
-
-#if 0
-
-/* This code is experimental */
-
-void generate_variants_2_all(uint64_t hash,
-                             unsigned char * sequence,
-                             unsigned int seqlen,
-                             uint64_t v_gene,
-                             uint64_t d_gene,
-                             var_s * variant_list,
-                             unsigned int * variant_count,
-                             struct bloom_s * bloom,
-                             struct hashtable_s * ht)
-{
-  /* make a copy of the sequence */
-
-  unsigned char * mut = (unsigned char *) xmalloc(seqlen + 1);
-  unsigned int mutlen = seqlen;
-  memcpy(mut, sequence, mutlen);
-
-  /* substitutions */
-
-  for(unsigned int i = 0; i < seqlen; i++)
-    {
-      unsigned char residue1 = sequence[i];
-      uint64_t hash1 = hash ^ zobrist_value(i, residue1);
-      for (unsigned char v = 0; v < alphabet_size; v++)
-        if (v != residue1)
-          {
-            uint64_t hash2 = hash1 ^ zobrist_value(i, v);
-            add_variant(hash2,
-                        variant_list, variant_count,
-                        substitution, i, v, 0, 0, 0, 0,
-                        bloom, ht);
-            mut[i] = v;
-
-#ifdef DUMP
-            printf("sub %2d %2d ", i, v);
-            ps(mutlen, mut);
-            printf("\n");
-#endif
-
-            generate_variants_1(hash2,
-                                mut, mutlen,
-                                v_gene, d_gene,
-                                variant_list, variant_count,
-                                bloom, ht);
-          }
-      mut[i] = residue1;
-    }
-
-  /* indels */
-
-  if (opt_indels)
-    {
-      /* deletions */
-      /* remember to check that seqlen is at least 2 for double deletions */
-
-      mutlen = seqlen - 1;
-      memcpy(mut, sequence + 1, mutlen);
-
-      hash = zobrist_hash_delete_first
-        (reinterpret_cast<unsigned char *> (sequence),
-         seqlen,
-         v_gene,
-         d_gene);
-
-      add_variant(hash,
-                  variant_list, variant_count,
-                  deletion, 0, 0, 0, 0, 0, 0,
-                  bloom, ht);
-
-#ifdef DUMP
-      printf("del %2d ", 0);
-      ps(mutlen, mut);
-      printf("\n");
-#endif
-
-      generate_variants_1(hash,
-                          mut, mutlen,
-                          v_gene, d_gene,
-                          variant_list, variant_count,
-                          bloom, ht);
-
-      unsigned char deleted = sequence[0];
-      for(unsigned int i = 1; i < seqlen; i++)
-        {
-          unsigned char v = sequence[i];
-          if (v != deleted)
-            {
-              hash ^= zobrist_value(i - 1, deleted)
-                ^ zobrist_value(i - 1, v);
-              add_variant(hash,
-                          variant_list, variant_count,
-                          deletion, i, 0, 0, 0, 0, 0,
-                          bloom, ht);
-              mut[i - 1] = sequence[i-1];
-
-#ifdef DUMP
-              printf("del %2d ", i);
-              ps(mutlen, mut);
-              printf("\n");
-#endif
-
-              generate_variants_1(hash,
-                                  mut, mutlen,
-                                  v_gene, d_gene,
-                                  variant_list, variant_count,
-                                  bloom, ht);
-              mut[i - 1] = deleted;
-              deleted = v;
-            }
-        }
-
-#if 1
-      /* insertions */
-
-      mutlen = seqlen + 1;
-      memcpy(mut + 1, sequence, mutlen - 1);
-
-      hash = zobrist_hash_insert_first
-        (reinterpret_cast<unsigned char *>(sequence),
-         seqlen,
-         v_gene,
-         d_gene);
-      for (unsigned char v = 0; v < alphabet_size; v++)
-        {
-          uint64_t hash1 = hash ^ zobrist_value(0, v);
-          add_variant(hash1,
-                      variant_list, variant_count,
-                      insertion, 0, v, 0, 0, 0, 0,
-                      bloom, ht);
-          mut[0] = v;
-
-#ifdef DUMP
-          printf("ins %2d %2d ", 0, v);
-          ps(mutlen, mut);
-          printf("\n");
-#endif
-
-          generate_variants_1(hash1,
-                              mut, mutlen,
-                              v_gene, d_gene,
-                              variant_list, variant_count,
-                              bloom, ht);
-        }
-
-      mut[0] = sequence[0];
-
-      for (unsigned int i = 0; i < seqlen; i++)
-        {
-          unsigned char inserted = sequence[i];
-          hash ^= zobrist_value(i, inserted) ^ zobrist_value(i+1, inserted);
-          for (unsigned char v = 0; v < alphabet_size; v++)
-            if (v != inserted)
-              {
-                uint64_t hash1 = hash ^ zobrist_value(i + 1, v);
-                add_variant(hash1,
-                            variant_list, variant_count,
-                            insertion, i + 1, v, 0, 0, 0, 0,
-                            bloom, ht);
-                mut[i + 1] = v;
-
-#ifdef DUMP
-                printf("ins %2d %2d ", i+1, v);
-                ps(mutlen, mut);
-                printf("\n");
-#endif
-
-                generate_variants_1(hash1,
-                                    mut, mutlen,
-                                    v_gene, d_gene,
-                                    variant_list, variant_count,
-                                    bloom, ht);
-              }
-          mut[i + 1] = sequence[i + 1];
-        }
-#endif
-    }
-
-  xfree(mut);
-}
-
-/* End experimental code */
-
-#endif
-
 
 void generate_variants_2(uint64_t hash,
                          unsigned char * sequence,
@@ -811,9 +360,7 @@ void generate_variants_2(uint64_t hash,
                          uint64_t v_gene,
                          uint64_t d_gene,
                          var_s * variant_list,
-                         unsigned int * variant_count,
-                         struct bloom_s * bloom,
-                         struct hashtable_s * ht)
+                         unsigned int * variant_count)
 {
   (void) v_gene;
   (void) d_gene;
@@ -843,403 +390,12 @@ void generate_variants_2(uint64_t hash,
                           uint64_t hash4 = hash3 ^ zobrist_value(j, w);
                           add_variant(hash4,
                                       variant_list, variant_count,
-                                      sub_sub, i, v, j, w, 0, 0,
-                                      bloom, ht);
+                                      sub_sub, i, v, j, w);
                         }
                     }
                 }
             }
         }
-    }
-
-
-#if 0
-
-  /* The code below is not used */
-  /* Indels with d >= 2 is disabled */
-  /* It is not 100% correct */
-
-  if (opt_indels)
-    {
-
-#if 1
-
-      /* generate all double deletions */
-      /* avoid special cases that result in identical sequences */
-      /* e.g. with repeats like AAC => --C = C, -A- = A, A-- = A */
-      /* or like ATAT => --AT = AT, -T-T = TT, -TA- = TA, A--T = AT,
-                         A-A- = AA, AT-- = AT */
-
-      if (seqlen >= 2)
-        {
-          uint64_t hash1 = zobrist_hash_delete_first_two
-            (reinterpret_cast<unsigned char *> (sequence),
-             seqlen,
-             v_gene,
-             d_gene);
-
-          for (unsigned int i = 0; i < seqlen - 1; i++)
-            {
-              if (i > 0)
-                {
-                  hash1 ^= zobrist_value(i - 1, sequence[i - 1])
-                    ^ zobrist_value(i - 1, sequence[i + 1]);
-                }
-
-              if ((i == 0) ||
-                  ((sequence[i - 1] != sequence[i + 1]) &&
-                   (sequence[i - 1] != sequence[i    ])))
-                {
-                  uint64_t hash2 = hash1;
-
-                  for (unsigned int j = i + 1; j < seqlen; j++)
-                    {
-                      if (j > i + 1)
-                        {
-                          hash2 ^= zobrist_value(j - 2, sequence[j - 1])
-                            ^ zobrist_value(j - 2, sequence[j]);
-                        }
-
-                      if ((j <= i + 1) || (sequence[j - 1] != sequence[j]))
-                        {
-                          add_variant(hash2,
-                                      variant_list, variant_count,
-                                      del_del, i, 0, j, 0, 0, 0,
-                                      bloom, ht);
-                        }
-                    }
-                }
-            }
-        }
-#endif
-
-      uint64_t hash1;
-
-#if 1
-
-      /* generate all double insertions */
-
-      hash1 = zobrist_hash_insert_first_two
-        (reinterpret_cast<unsigned char *> (sequence),
-         seqlen,
-         v_gene,
-         d_gene);
-
-      /* insert any residue in first position */
-      /* except from the same as in the previous position */
-
-      for (unsigned int i = 0; i < seqlen + 1; i++)
-        {
-          if (i > 0)
-            {
-              hash1 ^= zobrist_value(i - 1, sequence[i - 1]) ^
-                       zobrist_value(i + 1, sequence[i - 1]);
-            }
-          for (unsigned char v1 = 0; v1 < alphabet_size; v1++)
-            {
-              if ((i == 0) || (v1 != sequence[i - 1]))
-                {
-                  uint64_t hash2 = hash1 ^ zobrist_value(i, v1);
-
-                  /* insert any residue in second position */
-                  /* except from the same as in the previous position */
-
-                  for (unsigned int j = i + 1; j < seqlen + 2; j++)
-                    {
-                      if (j > i + 1)
-                        {
-                          hash2 ^= zobrist_value(j - 1, sequence[j - 2]) ^
-                            zobrist_value(j,     sequence[j - 2]);
-                        }
-
-                      for (unsigned char v2 = 0; v2 < alphabet_size; v2++)
-                        {
-                          if ((j == i + 1) || (v2 != sequence[j - 2]))
-                            {
-                              uint64_t hash3 = hash2 ^ zobrist_value(j, v2);
-                              add_variant(hash3,
-                                          variant_list, variant_count,
-                                          ins_ins, i, v1, j, v2, 0, 0,
-                                          bloom, ht);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-#endif
-
-
-#if 1
-
-      /* generate all insertions/substitutions */
-
-      hash1 = zobrist_hash_insert_first
-        (reinterpret_cast<unsigned char *> (sequence),
-         seqlen,
-         v_gene,
-         d_gene);
-
-      for (unsigned int i = 0; i < seqlen + 1; i++)
-        {
-          if (i > 0)
-            {
-              hash1 ^= zobrist_value(i - 1, sequence[i - 1]) ^
-                       zobrist_value(i,     sequence[i - 1]);
-            }
-          for (unsigned char v1 = 0; v1 < alphabet_size; v1++)
-            {
-              if (((i == 0) )// && (sequence[0] != sequence[1]))
-                  || ((i > 0) && (v1 != sequence[i - 1])))
-                {
-                  /* insert any residue in position i */
-                  /* except the same as in the previous position */
-
-                  uint64_t hash2 = hash1 ^ zobrist_value(i, v1);
-
-                  for (unsigned int j = 0; j < seqlen + 1; j++)
-                    {
-                      if ((j < i) || (j > i + 1))
-                        {
-                          /*
-                            Substitute any residue in position j.
-                            Avoid same position as insertion,
-                            as it would be same as single insertion.
-                            Also avoid position right after insertion,
-                            as it would give the same result.
-                          */
-
-                          /* p is the position of the substitution
-                             in the original sequence */
-
-                          unsigned int p = j;
-                          if (i < j)
-                            p--;
-
-                          if ((i + 1 != j) || (sequence[i] != sequence[j]))
-                            {
-                              for (unsigned char v2 = 0;
-                                   v2 < alphabet_size;
-                                   v2++)
-                                {
-                                  /* avoid same residue as original */
-                                  if (v2 != sequence[p])
-                                    {
-                                      uint64_t hash3 = hash2
-                                        ^ zobrist_value(j, v2)
-                                        ^ zobrist_value(j, sequence[p]);
-                                      add_variant(hash3,
-                                                  variant_list, variant_count,
-                                                  ins_sub, i, v1, j, v2, 0, 0,
-                                                  bloom, ht);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-#endif
-
-#if 1
-
-      /* generate all deletions/substitutions */
-      /* still not 100% correct, e.g. with sequence CCAC */
-
-      hash1 = zobrist_hash_delete_first
-        (reinterpret_cast<unsigned char *> (sequence),
-         seqlen,
-         v_gene,
-         d_gene);
-
-      for (unsigned int i = 0; i < seqlen; i++)
-        {
-          /* i = zero-based position of deletion in orig sequence */
-          unsigned char deleted = sequence[i];
-          unsigned int rep = 0;
-
-          if ((i == 0) || (sequence[i-1] != sequence[i]))
-            {
-              if (i > 0)
-                {
-                  hash1 ^= zobrist_value(i - 1, sequence[i - 1])
-                         ^ zobrist_value(i - 1, sequence[i    ]);
-                }
-
-              for (unsigned int j = 0; j < seqlen; j++)
-                {
-                  if (j == i + 3)
-                    rep = 1;
-                  if (rep && (sequence[j-1] != sequence[j-2]))
-                    rep = 0;
-
-                  /* j = zero-based position of subst in orig sequence */
-
-                  if ((i > j + 1) || (i < j))
-                    {
-                      /*
-                        Substitute any residue in position j.
-                        Avoid same position as deletion.
-                        Also avoid position left of deletion.
-                      */
-
-                      /* p = zero-based position of subst in new sequence */
-
-                      unsigned int p = j;
-                      if (i < j)
-                        p--;
-
-                      for (unsigned char v2 = 0; v2 < alphabet_size; v2++)
-                        {
-                          /*
-                            When substituting in pos j, avoid same residue as
-                            - the original residue in position j
-                            - just deleted in position j-1
-                            - between deletion and substitution if j=i+2
-                            - repeated between i and j when i < j
-                          */
-
-                          if ((v2 != sequence[j]) &&
-                              ((i + 1 != j) || (v2 != deleted)) &&
-                              ((i + 2 != j) || (v2 != sequence[i+1])) &&
-                              ((! rep) || (v2 != sequence[j-1])))
-                            {
-                              uint64_t hash2 = hash1
-                                ^ zobrist_value(p, v2)
-                                ^ zobrist_value(p, sequence[j]);
-                              add_variant(hash2,
-                                          variant_list, variant_count,
-                                          del_sub, i, 0, p, v2, 0, 0,
-                                          bloom, ht);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-#endif
-
-#if 1
-
-      /* generate all deletion/insertions */
-      /* avoid same as single or double substitutions */
-
-      hash1 = hash ^ zobrist_value(0, sequence[0]);
-
-      for (unsigned int i = 0; i < seqlen; i++)
-        {
-          /* i is position of deletion in original sequence */
-
-          if (i > 0)
-            {
-              hash1 ^= zobrist_value(i, sequence[i])
-                     ^ zobrist_value(i, sequence[i-1]);
-            }
-
-          uint64_t hash2 = hash1;
-
-          for (unsigned int j = 0; j < seqlen; j++)
-            {
-              /* j is position of insertion in new sequence */
-
-              /* p is position left of insertion in old sequence */
-
-              unsigned int p = j;
-
-              if (j > 0)
-                {
-                  if (j <= i)
-                    p--;
-                  hash2 ^= zobrist_value(j,   sequence[p])
-                         ^ zobrist_value(j-1, sequence[p]);
-                }
-
-              if (j != i)
-                {
-                  for (unsigned char v = 0; v < alphabet_size; v++)
-                    {
-                      if ((v != sequence[j]) &&
-                          ((j + 1 != i) || (v != sequence[i])))
-                        {
-                          uint64_t hash3 = hash2 ^ zobrist_value(j, v);
-                          add_variant(hash3,
-                                      variant_list, variant_count,
-                                      del_ins, i, 0, j, v, 0, 0,
-                                      bloom, ht);
-                        }
-                    }
-                }
-            }
-        }
-
-#endif
-
-    }
-
-#endif
-
-  /* End experimental code */
-
-}
-
-
-void generate_variants_3(uint64_t hash,
-                         unsigned char * sequence,
-                         unsigned int seqlen,
-                         uint64_t v_gene,
-                         uint64_t d_gene,
-                         var_s * variant_list,
-                         unsigned int * variant_count,
-                         struct bloom_s * bloom,
-                         struct hashtable_s * ht)
-{
-  (void) v_gene;
-  (void) d_gene;
-
-  /* generate all triple substitutions */
-
-  for (unsigned int i = 0; i + 2 < seqlen; i++)
-    {
-      unsigned char res1 = sequence[i];
-      uint64_t hash1 = hash ^ zobrist_value(i, res1);
-
-      for (unsigned char v = 0; v < alphabet_size; v++)
-        if (v != res1)
-          {
-            uint64_t hash2 = hash1 ^ zobrist_value(i, v);
-
-            for (unsigned int j = i + 1; j + 1 < seqlen; j++)
-              {
-                unsigned char res2 = sequence[j];
-                uint64_t hash3 = hash2 ^ zobrist_value(j, res2);
-
-                for (unsigned char w = 0; w < alphabet_size; w++)
-                  if (w != res2)
-                    {
-                      uint64_t hash4 = hash3 ^ zobrist_value(j, w);
-
-                      for (unsigned int k = j + 1; k < seqlen; k++)
-                        {
-                          unsigned char res3 = sequence[k];
-                          uint64_t hash5 = hash4 ^ zobrist_value(k, res3);
-
-                          for (unsigned char x = 0; x < alphabet_size; x++)
-                            if (x != res3)
-                              {
-                                uint64_t hash6 = hash5 ^ zobrist_value(k, x);
-                                add_variant(hash6,
-                                            variant_list, variant_count,
-                                            sub_sub_sub, i, v, j, w, k, x,
-                                            bloom, ht);
-                              }
-                        }
-                    }
-              }
-          }
     }
 }
 
@@ -1251,50 +407,15 @@ void generate_variants(uint64_t hash,
                        var_s * variant_list,
                        unsigned int * variant_count)
 {
-#ifdef DUMP
-  dump_seed_sequence = sequence;
-  dump_seed_seqlen = seqlen;
-  dump_v_gene = v_gene;
-  dump_d_gene = d_gene;
-
-#if 0
-  printf("seq (%i): ", seqlen);
-  ps(seqlen, sequence);
-  printf("\n");
-#endif
-#endif
-
-
-#ifdef USEBLOOM
-  uint64_t bloomsize = 1;
-  uint64_t needed = max_variants(seqlen) * 2;
-  while (needed > bloomsize)
-    bloomsize *= 2;
-
-  struct bloom_s * bloom = bloom_init(bloomsize);
-#else
-  struct bloom_s * bloom = nullptr;
-#endif
-
-#ifdef USEHASH
-  struct hashtable_s * ht = hash_init(max_variants(seqlen));
-#else
-  struct hashtable_s * ht = nullptr;
-#endif
-
   generate_variants_0(hash,
-                      sequence, seqlen,
-                      v_gene, d_gene,
-                      variant_list, variant_count,
-                      bloom, ht);
+                      variant_list, variant_count);
 
   if (opt_differences >= 1)
     {
       generate_variants_1(hash,
                           sequence, seqlen,
                           v_gene, d_gene,
-                          variant_list, variant_count,
-                          bloom, ht);
+                          variant_list, variant_count);
     }
 
   if (opt_differences >= 2)
@@ -1302,32 +423,6 @@ void generate_variants(uint64_t hash,
       generate_variants_2(hash,
                           sequence, seqlen,
                           v_gene, d_gene,
-                          variant_list, variant_count,
-                          bloom, ht);
+                          variant_list, variant_count);
     }
-
-  if (opt_differences >= 3)
-    {
-      generate_variants_3(hash,
-                          sequence, seqlen,
-                          v_gene, d_gene,
-                          variant_list, variant_count,
-                          bloom, ht);
-    }
-
-#ifdef USEHASH
-  hash_exit(ht);
-#endif
-
-#ifdef USEBLOOM
-  bloom_exit(bloom);
-#endif
-
-#ifdef HASHSTATS
-  printf("Hashstats: %" PRIu64 "\n", tries);
-#endif
-
-#ifdef DUMP
-  exit(1);
-#endif
 }

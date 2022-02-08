@@ -27,16 +27,7 @@ enum mutation_kind_enum
    substitution,
    deletion,
    insertion,
-   sub_sub,
-   sub_del, /* not used */
-   sub_ins, /* not used */
-   del_sub,
-   del_del,
-   del_ins,
-   ins_sub,
-   ins_del, /* not used */
-   ins_ins,
-   sub_sub_sub
+   sub_sub
   };
 
 /*
@@ -77,11 +68,8 @@ struct var_s
   enum mutation_kind_enum kind;
   unsigned int pos1;
   unsigned int pos2;
-  unsigned int pos3;
   unsigned char residue1;
   unsigned char residue2;
-  unsigned char residue3;
-  /* alignment padding may be beneficial */
 };
 
 void generate_variant_sequence(unsigned char * seed_sequence,

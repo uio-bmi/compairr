@@ -60,9 +60,9 @@ bool opt_version;
 char * opt_log;
 char * opt_output;
 char * opt_pairs;
-char * opt_summands_string;
+char * opt_score_string;
 int64_t opt_differences;
-int64_t opt_summands_int;
+int64_t opt_score_int;
 int64_t opt_threads;
 
 /* Other variables */
@@ -76,10 +76,10 @@ int alphabet_size;
 static char dash[] = "-";
 static char * DASH_FILENAME = dash;
 
-static const char * summand_options[] =
+static const char * score_options[] =
   { "Product", "Ratio", "Min", "Max", "Mean", "MH", "Jaccard" };
 
-static const char * summand_descr[] =
+static const char * score_descr[] =
   {
     "Sum of products of counts",
     "Sum of ratios of counts",
@@ -155,7 +155,7 @@ void args_show()
   if (opt_matrix || opt_existence)
     {
       fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
-      fprintf(logfile, "Summands (s):      %s\n", summand_descr[opt_summands_int]);
+      fprintf(logfile, "Score (s):         %s\n", score_descr[opt_score_int]);
       fprintf(logfile, "Pairs file (p):    %s\n", opt_pairs ? opt_pairs : "(none)");
     }
   fprintf(logfile, "Log file (l):      %s\n", opt_log ? opt_log : "(stderr)");
@@ -173,20 +173,20 @@ void args_usage()
   fprintf(stderr, " -c, --cluster               cluster sequences in one repertoire\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
-  fprintf(stderr, " -d, --differences INTEGER   number (0-3) of differences accepted (0*)\n");
+  fprintf(stderr, " -d, --differences INTEGER   number of differences accepted (0*)\n");
   fprintf(stderr, " -i, --indels                allow insertions or deletions when d=1\n");
   fprintf(stderr, " -f, --ignore-counts         ignore duplicate_count information\n");
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
   fprintf(stderr, " -n, --nucleotides           compare nucleotides, not amino acids\n");
-  fprintf(stderr, " -s, --summands STRING       MH, Jaccard, product*, ratio, min, max, or mean\n");
+  fprintf(stderr, " -s, --score STRING          MH, Jaccard, product*, ratio, min, max, or mean\n");
   fprintf(stderr, " -t, --threads INTEGER       number (1-256) of threads to use (1*)\n");
   fprintf(stderr, " -u, --ignore-unknown        ignore sequences with unknown symbols\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
-  fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none*)\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr*)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout*)\n");
+  fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none*)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "                             * default value\n");
   fprintf(stderr, "\n");
@@ -218,8 +218,8 @@ void args_init(int argc, char **argv)
   opt_ignore_genes = false;
   opt_ignore_unknown = false;
   opt_nucleotides = false;
-  opt_summands_int = 0;
-  opt_summands_string = NULL;
+  opt_score_int = 0;
+  opt_score_string = NULL;
   opt_threads = 1;
   opt_alternative = false;
   opt_pairs = nullptr;
@@ -246,6 +246,7 @@ void args_init(int argc, char **argv)
     {"nucleotides",      no_argument,       nullptr, 'n' },
     {"output",           required_argument, nullptr, 'o' },
     {"pairs",            required_argument, nullptr, 'p' },
+    {"score",            required_argument, nullptr, 's' },
     {"summands",         required_argument, nullptr, 's' },
     {"threads",          required_argument, nullptr, 't' },
     {"ignore-unknown",   no_argument,       nullptr, 'u' },
@@ -354,8 +355,8 @@ void args_init(int argc, char **argv)
         break;
 
       case 's':
-        /* summands */
-        opt_summands_string = optarg;
+        /* score, summands */
+        opt_score_string = optarg;
         break;
 
       case 't':
@@ -444,8 +445,8 @@ void args_init(int argc, char **argv)
       exit(1);
     }
 
-  if ((opt_differences < 0) || (opt_differences > 3))
-    fatal("Differences specifed with -d or -differences must be 0, 1, 2 or 3.");
+  if (opt_differences < 0)
+    fatal("Differences specified with -d or -differences cannot be negative.");
 
   if (opt_indels && (opt_differences != 1))
     fatal("Indels are only allowed when d=1");
@@ -456,20 +457,22 @@ void args_init(int argc, char **argv)
         fatal("Option -p or --pairs is not allowed with -c or --cluster");
       if (opt_alternative)
         fatal("Option -a or --alternative is not allowed with -c or --cluster");
+      if (opt_score_string)
+        fatal("Option -s or --score is not allowed with -c or --cluster");
     }
 
-  if (opt_summands_string)
+  if (opt_score_string)
     {
-      opt_summands_int = -1;
-      for(int i = 0; i < summands_end; i++)
-        if (strcasecmp(opt_summands_string, summand_options[i]) == 0)
+      opt_score_int = -1;
+      for(int i = 0; i < score_end; i++)
+        if (strcasecmp(opt_score_string, score_options[i]) == 0)
           {
-            opt_summands_int = i;
+            opt_score_int = i;
             break;
           }
-      if (opt_summands_int < 0)
+      if (opt_score_int < 0)
         {
-          fatal("Argument to -s or --summands must be MH, Jaccard, product, ratio, min, max or mean");
+          fatal("Argument to -s or --score must be MH, Jaccard, product, ratio, min, max or mean");
         }
     }
 

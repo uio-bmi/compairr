@@ -110,6 +110,8 @@ const unsigned int MAX_THREADS = 256;
 
 const int MAX_INSERTS = 3;
 
+const int MAXDIFF_HASH = 2;
+
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
@@ -122,14 +124,14 @@ extern int alphabet_size;
 
 enum
   {
-    summands_product,
-    summands_ratio,
-    summands_min,
-    summands_max,
-    summands_mean,
-    summands_mh,
-    summands_jaccard,
-    summands_end
+    score_product,
+    score_ratio,
+    score_min,
+    score_max,
+    score_mean,
+    score_mh,
+    score_jaccard,
+    score_end
   };
 
 /* common data */
@@ -148,9 +150,9 @@ extern bool opt_version;
 extern char * opt_log;
 extern char * opt_output_file;
 extern char * opt_pairs;
-extern char * opt_summands_string;
+extern char * opt_score_string;
 extern int64_t opt_differences;
-extern int64_t opt_summands_int;
+extern int64_t opt_score_int;
 extern int64_t opt_threads;
 
 extern FILE * outfile;

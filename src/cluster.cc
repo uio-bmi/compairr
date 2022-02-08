@@ -44,12 +44,13 @@ static unsigned int * network = 0;
 static unsigned int network_count = 0;
 static unsigned int network_seq = 0;
 static uint64_t network_alloc = 0;
+static uint64_t seqcount = 0;
 
 static struct db * d;
 static struct bloom_s * bloom = 0;
 static hashtable_s * hashtable = 0;
 
-int compare_cluster(const void * a, const void * b)
+static int compare_cluster(const void * a, const void * b)
 {
   clusterinfo_s * x = (clusterinfo_s *) a;
   clusterinfo_s * y = (clusterinfo_s *) b;
@@ -75,11 +76,11 @@ static inline void hash_insert_cluster(uint64_t seq)
   bloom_set(bloom, hash);
 }
 
-void find_variant_matches(uint64_t seed,
-                          var_s * var,
-                          unsigned int * * hits_data,
-                          unsigned int * hits_count,
-                          uint64_t * hits_alloc)
+static void find_variant_matches(uint64_t seed,
+                                 var_s * var,
+                                 unsigned int * * hits_data,
+                                 unsigned int * hits_count,
+                                 uint64_t * hits_alloc)
 {
   /* compute hash table index */
 
@@ -134,11 +135,11 @@ void find_variant_matches(uint64_t seed,
     }
 }
 
-void process_variants(uint64_t seed,
-                      var_s * variant_list,
-                      unsigned int * * hits_data,
-                      unsigned int * hits_count,
-                      uint64_t * hits_alloc)
+static void process_variants(uint64_t seed,
+                             var_s * variant_list,
+                             unsigned int * * hits_data,
+                             unsigned int * hits_count,
+                             uint64_t * hits_alloc)
 {
   unsigned int variant_count = 0;
   * hits_count = 0;
@@ -161,12 +162,71 @@ void process_variants(uint64_t seed,
     }
 }
 
-void network_thread(int64_t t)
+static void process_trad(uint64_t seed,
+                         unsigned int * * hits_data,
+                         unsigned int * hits_count,
+                         uint64_t * hits_alloc)
+{
+  /* Only to be used with no indels (and d >= 3) */
+
+  for (uint64_t hit = 0; hit < seqcount; hit++)
+    if (seed != hit)
+      {
+        /* check if everything matches */
+
+        unsigned int seed_v_gene = db_get_v_gene(d, seed);
+        unsigned int seed_j_gene = db_get_j_gene(d, seed);
+
+        unsigned int hit_v_gene = db_get_v_gene(d, hit);
+        unsigned int hit_j_gene = db_get_j_gene(d, hit);
+
+        if (opt_ignore_genes ||
+            ((seed_v_gene == hit_v_gene) && (seed_j_gene == hit_j_gene)))
+          {
+            unsigned int seed_seqlen = db_getsequencelen(d, seed);
+            unsigned int hit_seqlen = db_getsequencelen(d, hit);
+
+            if (seed_seqlen == hit_seqlen)
+              {
+                unsigned char * seed_sequence
+                  = (unsigned char *) db_getsequence(d, seed);
+                unsigned char * hit_sequence
+                  = (unsigned char *) db_getsequence(d, hit);
+
+                if (seq_diff(seed_sequence, hit_sequence, seed_seqlen)
+                    <= opt_differences)
+                  {
+                    if (*hits_alloc <= *hits_count)
+                      {
+                        *hits_alloc += 1024;
+                        *hits_data = static_cast<unsigned int *>
+                          (xrealloc((*hits_data),
+                                    (*hits_alloc) * sizeof(unsigned int)));
+                      }
+                    (*hits_data)[(*hits_count)++] = hit;
+                  }
+              }
+          }
+      }
+}
+
+static void process_seq(uint64_t seed,
+                        var_s * variant_list,
+                        unsigned int * * hits_data,
+                        unsigned int * hits_count,
+                        uint64_t * hits_alloc)
+{
+  if (opt_differences <= MAXDIFF_HASH)
+    process_variants(seed, variant_list, hits_data, hits_count, hits_alloc);
+  else
+    process_trad(seed, hits_data, hits_count, hits_alloc);
+}
+
+static void network_thread(int64_t t)
 {
   (void) t;
 
   unsigned int longest = db_getlongestsequence(d);
-  uint64_t seqcount = db_getsequencecount(d);
   uint64_t maxvar = max_variants(longest);
 
   uint64_t hits_alloc = 1024;
@@ -186,8 +246,8 @@ void network_thread(int64_t t)
       pthread_mutex_unlock(&network_mutex);
 
       unsigned int hits_count = 0;
-      process_variants(seed, variant_list,
-                       & hits_data, & hits_count, & hits_alloc);
+      process_seq(seed, variant_list,
+                  & hits_data, & hits_count, & hits_alloc);
 
       pthread_mutex_lock(&network_mutex);
 
@@ -216,7 +276,7 @@ void network_thread(int64_t t)
 static unsigned int clustersize = 0;
 static unsigned int current_cluster_tail = 0;
 
-void process_seed(unsigned int seed)
+static void process_seed(unsigned int seed)
 {
   clustersize++;
 
@@ -248,26 +308,27 @@ void cluster(char * filename)
   db_read(d, filename, false, false);
 
   unsigned int longest = db_getlongestsequence(d);
-  uint64_t seqcount = db_getsequencecount(d);
+  seqcount = db_getsequencecount(d);
 
   fprintf(logfile, "\n");
-
-  zobrist_init(longest + MAX_INSERTS,
-               db_get_v_gene_count(),
-               db_get_j_gene_count());
-
   fprintf(logfile, "Unique V genes:    %" PRIu64 "\n",
           db_get_v_gene_count());
-
   fprintf(logfile, "Unique J genes:    %" PRIu64 "\n",
           db_get_j_gene_count());
-
   fprintf(logfile, "\n");
 
-  db_hash(d);
+  if (opt_differences <= MAXDIFF_HASH)
+    {
+      zobrist_init(longest + MAX_INSERTS,
+                   db_get_v_gene_count(),
+                   db_get_j_gene_count());
 
-  hashtable = hash_init(seqcount);
-  bloom = bloom_init(hash_get_tablesize(hashtable) * 2);
+      db_hash(d);
+
+      hashtable = hash_init(seqcount);
+      bloom = bloom_init(hash_get_tablesize(hashtable) * 2);
+    }
+
   iteminfo = static_cast<struct iteminfo_s *>
     (xmalloc(seqcount * sizeof(struct iteminfo_s)));
 
@@ -276,7 +337,8 @@ void cluster(char * filename)
     {
       iteminfo[i].clusterid = no_cluster;
       iteminfo[i].next = no_cluster;
-      hash_insert_cluster(i);
+      if (opt_differences <= MAXDIFF_HASH)
+        hash_insert_cluster(i);
       progress_update(i);
     }
   progress_done();
@@ -401,9 +463,14 @@ void cluster(char * filename)
     xfree(clusterinfo);
   if (iteminfo)
     xfree(iteminfo);
-  bloom_exit(bloom);
-  hash_exit(hashtable);
-  zobrist_exit();
+
+  if (opt_differences <= MAXDIFF_HASH)
+    {
+      bloom_exit(bloom);
+      hash_exit(hashtable);
+      zobrist_exit();
+    }
+
   db_free(d);
   db_exit();
 }

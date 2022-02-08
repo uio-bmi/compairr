@@ -168,3 +168,17 @@ FILE * fopen_output(const char * filename)
   else
     return fopen(filename, "w");
 }
+
+int64_t seq_diff(unsigned char * a, unsigned char * b, int64_t len)
+{
+  /* Count number of different characters in a and b of length len */
+  int64_t diffs = 0;
+  for (int64_t i = 0; i < len; i++)
+    if (*a++ != *b++)
+      {
+        diffs++;
+        if (diffs > opt_differences)
+          break;
+      }
+  return diffs;
+}
