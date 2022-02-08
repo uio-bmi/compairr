@@ -126,7 +126,10 @@ enum
     summands_ratio,
     summands_min,
     summands_max,
-    summands_mean
+    summands_mean,
+    summands_mh,
+    summands_jaccard,
+    summands_end
   };
 
 /* common data */

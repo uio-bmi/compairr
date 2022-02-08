@@ -76,7 +76,7 @@ int alphabet_size;
 static char dash[] = "-";
 static char * DASH_FILENAME = dash;
 
-static const char * summand_options[] = { "Product", "Ratio", "Min", "Max", "Mean" };
+static const char * summand_options[] = { "Product", "Ratio", "Min", "Max", "Mean", "MH", "Jaccard" };
 
 int64_t args_long(char * str, const char * option);
 void args_show();
@@ -161,20 +161,22 @@ void args_usage()
   fprintf(stderr, " -c, --cluster               cluster sequences in one repertoire\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
-  fprintf(stderr, " -d, --differences INTEGER   number (0-3) of differences accepted (0)\n");
+  fprintf(stderr, " -d, --differences INTEGER   number (0-3) of differences accepted (0*)\n");
   fprintf(stderr, " -i, --indels                allow insertions or deletions when d=1\n");
   fprintf(stderr, " -f, --ignore-counts         ignore duplicate_count information\n");
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
   fprintf(stderr, " -n, --nucleotides           compare nucleotides, not amino acids\n");
-  fprintf(stderr, " -s, --summands STRING       sum product (default), ratio, min, max, or mean\n");
-  fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1)\n");
-  fprintf(stderr, " -u, --ignore-unknown        ignore sequences with unknown symbols (No)\n");
+  fprintf(stderr, " -s, --summands STRING       MH, Jaccard, product*, ratio, min, max, or mean\n");
+  fprintf(stderr, " -t, --threads INTEGER       number (1-256) of threads to use (1*)\n");
+  fprintf(stderr, " -u, --ignore-unknown        ignore sequences with unknown symbols\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
-  fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none)\n");
-  fprintf(stderr, " -l, --log FILENAME          log to file (stderr)\n");
-  fprintf(stderr, " -o, --output FILENAME       output results to file (stdout)\n");
+  fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none*)\n");
+  fprintf(stderr, " -l, --log FILENAME          log to file (stderr*)\n");
+  fprintf(stderr, " -o, --output FILENAME       output results to file (stdout*)\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "                             * default value\n");
   fprintf(stderr, "\n");
 }
 
@@ -447,7 +449,7 @@ void args_init(int argc, char **argv)
   if (opt_summands_string)
     {
       opt_summands_int = -1;
-      for(int i = 0; i < 5; i++)
+      for(int i = 0; i < summands_end; i++)
         if (strcasecmp(opt_summands_string, summand_options[i]) == 0)
           {
             opt_summands_int = i;
@@ -455,7 +457,7 @@ void args_init(int argc, char **argv)
           }
       if (opt_summands_int < 0)
         {
-          fatal("Argument to -s or --summands must be product, ratio, min, max or mean");
+          fatal("Argument to -s or --summands must be MH, Jaccard, product, ratio, min, max or mean");
         }
     }
 
