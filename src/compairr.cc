@@ -76,7 +76,19 @@ int alphabet_size;
 static char dash[] = "-";
 static char * DASH_FILENAME = dash;
 
-static const char * summand_options[] = { "Product", "Ratio", "Min", "Max", "Mean", "MH", "Jaccard" };
+static const char * summand_options[] =
+  { "Product", "Ratio", "Min", "Max", "Mean", "MH", "Jaccard" };
+
+static const char * summand_descr[] =
+  {
+    "Sum of products of counts",
+    "Sum of ratios of counts",
+    "Sum of minimum of counts",
+    "Sum of maximum of counts",
+    "Sum of mean of counts",
+    "Morisita-Horn index",
+    "Jaccard index"
+  };
 
 int64_t args_long(char * str, const char * option);
 void args_show();
@@ -143,7 +155,7 @@ void args_show()
   if (opt_matrix || opt_existence)
     {
       fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
-      fprintf(logfile, "Summands (s):      %s\n", summand_options[opt_summands_int]);
+      fprintf(logfile, "Summands (s):      %s\n", summand_descr[opt_summands_int]);
       fprintf(logfile, "Pairs file (p):    %s\n", opt_pairs ? opt_pairs : "(none)");
     }
   fprintf(logfile, "Log file (l):      %s\n", opt_log ? opt_log : "(stderr)");

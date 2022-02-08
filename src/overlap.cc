@@ -858,7 +858,7 @@ void overlap(char * set1_filename, char * set2_filename)
                 {
                   unsigned int t = set2_lookup_repertoire[j];
                   fprintf(outfile,
-                          "%s\t%s\t",
+                          "%s\t%s",
                           db_get_repertoire_id(d1, s),
                           db_get_repertoire_id(d2, t));
                   show_matrix_value(s, t);
@@ -877,7 +877,7 @@ void overlap(char * set1_filename, char * set2_filename)
                 {
                   unsigned int t = set2_lookup_repertoire[j];
                   fprintf(outfile,
-                          "%s\t%s\t",
+                          "%s\t%s",
                           db_get_sequence_id(d1, i),
                           db_get_repertoire_id(d2, t));
                   show_matrix_value(i, t);
@@ -903,7 +903,6 @@ void overlap(char * set1_filename, char * set2_filename)
               for (unsigned int j = 0; j < set2_repertoires; j++)
                 {
                   unsigned int t = set2_lookup_repertoire[j];
-                  fprintf(outfile, "\t");
                   show_matrix_value(s, t);
                   progress_update(++x);
                 }
@@ -923,7 +922,6 @@ void overlap(char * set1_filename, char * set2_filename)
               for (unsigned int j = 0; j < set2_repertoires; j++)
                 {
                   unsigned int t = set2_lookup_repertoire[j];
-                  fprintf(outfile, "\t");
                   show_matrix_value(i, t);
                   progress_update(++x);
                 }
