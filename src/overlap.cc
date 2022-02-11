@@ -813,14 +813,14 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /* dump similarity matrix */
 
-  progress_init("Writing results:  ", set1_repertoires * set2_repertoires);
-
   unsigned int x = 0;
   if (opt_alternative)
     {
       if (opt_matrix)
         {
           /* Overlap results, 3-column format */
+          progress_init("Writing results:  ",
+                        set1_repertoires * set2_repertoires);
           fprintf(outfile, "#repertoire_id_1\trepertoire_id_2\tmatches\n");
           for (unsigned int i = 0; i < set1_repertoires; i++)
             {
@@ -841,6 +841,8 @@ void overlap(char * set1_filename, char * set2_filename)
       else
         {
           /* Existence results, 3-column format */
+          progress_init("Writing results:  ",
+                        set1_sequences * set2_repertoires);
           fprintf(outfile, "#sequence_id_1\trepertoire_id_2\tmatches\n");
           for (unsigned int i = 0; i < set1_sequences; i++)
             {
@@ -863,6 +865,8 @@ void overlap(char * set1_filename, char * set2_filename)
       if (opt_matrix)
         {
           /* Overlap results, matrix format */
+          progress_init("Writing results:  ",
+                        set1_repertoires * set2_repertoires);
           fprintf(outfile, "#");
           for (unsigned int j = 0; j < set2_repertoires; j++)
             fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
@@ -883,6 +887,8 @@ void overlap(char * set1_filename, char * set2_filename)
       else
         {
           /* Existence results, matrix format */
+          progress_init("Writing results:  ",
+                        set1_sequences * set2_repertoires);
           fprintf(outfile, "#");
           for (unsigned int j = 0; j < set2_repertoires; j++)
             fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));

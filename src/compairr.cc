@@ -476,6 +476,18 @@ void args_init(int argc, char **argv)
         }
     }
 
+  if (! opt_matrix)
+    {
+      if (opt_score_int == score_mh)
+        {
+          fatal("The Morisita-Horn index is only allowed when computing repertoire overlap");
+        }
+      if (opt_score_int == score_jaccard)
+        {
+          fatal("The Jaccard index is only allowed when computing repertoire overlap");
+        }
+    }
+
   if (opt_differences > 0)
     {
       if (opt_score_int == score_mh)
