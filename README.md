@@ -6,10 +6,9 @@ CompAIRR (`compairr`) is a command line tool to compare two sets of
 adaptive immune receptor repertoires and compute their overlap. It can
 also identify which sequences are present in which repertoires.
 Furthermore, CompAIRR can cluster the sequences in a repertoire
-set. Sequence comparisons can be exact or approximate, allowing 0-3
-substitutions and an indel, if desired. CompAIRR has been shown to be
-very fast and to have a small memory footprint compared to similar
-tools.
+set. Sequence comparisons can be exact or approximate. CompAIRR has
+been shown to be very fast and to have a small memory footprint
+compared to similar tools, when up to 2 differences are allowed.
 
 
 ## Installation
@@ -68,15 +67,16 @@ symbol is encountered in a sequence, unless one specifies the `-u` or
 `--ignore-unknown` option, in which case CompAIRR will simply ignore
 that sequence.
 
-The user can specify whether 0, 1, 2 or 3 differences are allowed when
-comparing sequences, using the option `-d` or `--differences`. To
-allow indels (insertions or deletions) the option `-i` or `--indels`
-may be specified, otherwise only substitutions are allowed. By
-default, no differences are allowed. The `-i` option is allowed only
-when d=1. The number of differences allowed strongly influences the
-speed of CompAIRR. The program will be exponentially slower as more
-differences are allowed. It will be relatively slow with d=2 and even
-slower with d=3. See the section on performance below for an example.
+The user can specify how many differences are allowed when comparing
+sequences, using the option `-d` or `--differences`. To allow indels
+(insertions or deletions) the option `-i` or `--indels` may be
+specified, otherwise only substitutions are allowed. By default, no
+differences are allowed. The `-i` option is allowed only when d=1. The
+number of differences allowed strongly influences the speed of
+CompAIRR. The program will be slower as more differences
+are allowed. When d=0 or d=1 it is very fast, but it will be relatively
+slow with d=2 and even slower when d>2. See the section on performance
+below for an example.
 
 The V and J gene alleles specified for each sequence must also match,
 unless the `-g` or `--ignore-genes` option is in effect.
@@ -103,16 +103,25 @@ Each set can contain many repertoires and each repertoire can contain
 many sequences. The tool will find the sequences in the two sets that
 are similar and output a matrix with results.
 
+CompAIRR assumes that all sequences within each repertoire are
+distinct, and that the abundance of each sequence is indicated in the
+`duplicate_count` field in the input file. Duplicated sequences,
+i.e. identical sequences (with the same V and J genes) within the same
+repertoire, may lead to unexpected results.
+
 The similar sequences of each repertoire in each set are found by
 comparing the sequences and their V and J genes.  The duplicate count
 of each sequence is taken into account and a matrix is output
 containing a value for each combination of repertoires in the two
 sets. The value is usually the sum of the products of the duplicate
 counts of all pairs of sequences in the two repertoires that match. If
-the option `-f` or `--ignore-counts` is specified, the duplicate
-count information is ignored and all counts are treated as 1. Instead of
+the option `-f` or `--ignore-counts` is specified, the duplicate count
+information is ignored and all counts are treated as 1. Instead of
 summing the product of the counts, the ratio, min, max, or mean may be
-used if specified with the `-s` or `--summand` option.
+used if specified with the `-s` or `--score` option. The Morisita-Horn
+index or Jaccard index will be calculated if `MH` or `Jaccard` is
+specified with the `-s` option. These indices can only be computed
+when d=0.
 
 The output will be a matrix of values in a tab-separated plain text
 file. Two different formats can be selected. In the default format,
@@ -175,7 +184,7 @@ matching sequences in the same way as for the overlap computation.
 To cluster the sequences in one repertoire, use the `-c` or
 `--cluster` option.
 
-One input file in the tab-separated format must be specified on the
+One input file in tab-separated format must be specified on the
 command line.
 
 The tool will cluster the sequences using single linkage hierarchical
@@ -233,7 +242,7 @@ Short | Long               | Argument | Default  | Description
 ------|--------------------|----------|----------|-------------
 `-a`  | `--alternative`    |          |          | Output results in three-column format, not matrix
 `-c`  | `--cluster`        |          |          | Cluster sequences in one repertoire
-`-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted (0-3)
+`-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted
 `-f`  | `--ignore-counts`  |          |          | Ignore duplicate count information
 `-g`  | `--ignore-genes`   |          |          | Ignore V and J gene information
 `-h`  | `--help`           |          |          | Display help text and exit
@@ -243,14 +252,14 @@ Short | Long               | Argument | Default  | Description
 `-n`  | `--nucleotides`    |          |          | Compare nucleotides, not amino acids
 `-o`  | `--output`         | FILENAME | (stdout) | Output results to specified file instead of stdout
 `-p`  | `--pairs`          | FILENAME | (none)   | Output matching pairs to specified file
-`-s`  | `--summands`       | STRING   | product  | Sum `product`, `ratio`, `min`, `max`, or `mean`
+`-s`  | `--score`          | STRING   | product  | Sum `product`, `ratio`, `min`, `max`, or `mean`; or compute `MH` or `Jaccard` index
 `-t`  | `--threads`        | INTEGER  | 1        | Number of threads to use (1-256)
 `-u`  | `--ignore-unknown` |          |          | Ignore sequences including unknown residue symbols
 `-v`  | `--version`        |          |          | Display version information
 `-x`  | `--existence`      |          |          | Check existence of sequences in repertoires
 
 
-## Example - Repertoire overlap
+## Example 1: Repertoire overlap
 
 In this example we will compute the overlap of two repertoire sets.
 
@@ -279,11 +288,11 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.7.0 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
-Start time:        Wed Oct 27 16:38:05 CEST 2021
-Command (m/c):     Overlap
+Start time:        Thu Mar 03 12:29:32 CET 2022
+Command (m/c/x):   Overlap (-m)
 Repertoire set 1:  seta.tsv
 Repertoire set 2:  setb.tsv
 Nucleotides (n):   No
@@ -291,10 +300,11 @@ Differences (d):   1
 Indels (i):        No
 Ignore counts (f): No
 Ignore genes (g):  No
+Ign. unknown (u):  No
 Threads (t):       1
 Output file (o):   output.tsv
 Output format (a): Matrix
-Summands (s):      Product
+Score (s):         Sum of products of counts
 Pairs file (p):    pairs.tsv
 Log file (l):      (stderr)
 
@@ -340,7 +350,7 @@ Hashing sequences: 100% (0s)
 Analysing:         100% (0s)
 Writing results:   100% (0s)
 
-End time:          Wed Oct 27 16:38:05 CEST 2021
+End time:          Thu Mar 03 12:29:32 CET 2022
 ```
 
 Repertoires will be sorted alphabetically by ID. The program gives some
@@ -383,7 +393,7 @@ This small dataset is included in the test folder and the tool can
 automatically be tested by running `make test`.
 
 
-## Example - Sequence existence
+## Example 2: Sequence existence
 
 In this example we will use the `-x` or `--existence` option to find
 out in which repertoires a set of sequences are present.
@@ -408,10 +418,10 @@ We run the following command:
 Here is the output to the console:
 
 ```
-CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.7.0 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
-Start time:        Wed Oct 27 16:55:35 CEST 2021
+Start time:        Thu Mar 03 12:31:16 CET 2022
 Command (m/c/x):   Existence (-x)
 Repertoire:        setc.tsv
 Repertoire set:    setb.tsv
@@ -420,10 +430,11 @@ Differences (d):   1
 Indels (i):        No
 Ignore counts (f): Yes
 Ignore genes (g):  No
+Ign. unknown (u):  No
 Threads (t):       1
 Output file (o):   output.tsv
 Output format (a): Matrix
-Summands (s):      Product
+Score (s):         Sum of products of counts
 Pairs file (p):    pairs.tsv
 Log file (l):      (stderr)
 
@@ -468,7 +479,7 @@ Hashing sequences: 100% (0s)
 Analysing:         100% (0s)
 Writing results:   100% (0s)
 
-End time:          Wed Oct 27 16:55:35 CEST 2021
+End time:          Thu Mar 03 12:31:16 CET 2022
 ```
 
 Here is the result in the `output.tsv` file:
@@ -496,7 +507,7 @@ B1 (matching sequences T and U) and that sequence Y was found in
 repertoire B2 (matching sequence V).
 
 
-## Example - Clustering sequences
+## Example 3: Clustering sequences
 
 This time we will cluster the nucleotide sequences in the file
 `setb.tsv` using the `-c` or `--cluster` option.
@@ -508,10 +519,10 @@ The command line to run is:
 The output during the clustering is as follows:
 
 ```
-CompAIRR 1.4.1 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.7.0 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
-Start time:        Wed Oct 27 17:18:55 CEST 2021
+Start time:        Thu Mar 03 12:33:05 CET 2022
 Command (m/c/x):   Cluster (-c)
 Repertoire:        setb.tsv
 Nucleotides (n):   Yes
@@ -519,6 +530,7 @@ Differences (d):   1
 Indels (i):        No
 Ignore counts (f): No
 Ignore genes (g):  No
+Ign. unknown (u):  No
 Threads (t):       1
 Output file (o):   output.tsv
 Log file (l):      (stderr)
@@ -546,7 +558,7 @@ Sorting clusters:  100% (0s)
 Writing clusters:  100% (0s)
 
 Clusters:          2
-End time:          Wed Oct 27 17:18:55 CEST 2021
+End time:          Thu Mar 03 12:33:05 CET 2022
 ```
 
 The result in the file `output.tsv` looks like this:
@@ -572,9 +584,10 @@ sequences is based on a similar concept developed for the tool
 sets. All hashes for one set are stored in a Bloom filter and in a
 hash table. We then look for matches to sequences in the second set by
 looking them up in the Bloom filter and then, if there was a match, in
-the hash table. To find matches with 1, 2 or 3 substitutions or
-indels, the hashes of all these variant sequences are generated and
-looked up.
+the hash table. To find matches with 1 or 2 substitutions or indels,
+the hashes of all these variant sequences are generated and looked
+up. When d>2, a different strategy is used where all sequences are
+compared against each other and the number of differences is found.
 
 
 ## Performance

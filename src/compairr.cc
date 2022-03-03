@@ -179,7 +179,7 @@ void args_usage()
   fprintf(stderr, " -g, --ignore-genes          ignore V and J gene information\n");
   fprintf(stderr, " -n, --nucleotides           compare nucleotides, not amino acids\n");
   fprintf(stderr, " -s, --score STRING          MH, Jaccard, product*, ratio, min, max, or mean\n");
-  fprintf(stderr, " -t, --threads INTEGER       number (1-256) of threads to use (1*)\n");
+  fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1*-256)\n");
   fprintf(stderr, " -u, --ignore-unknown        ignore sequences with unknown symbols\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
