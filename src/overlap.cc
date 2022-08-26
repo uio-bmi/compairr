@@ -60,19 +60,71 @@ typedef struct pair_s
 const uint64_t CHUNK = 1000;
 const char * empty_string = "";
 
-static inline void hash_insert_overlap(uint64_t rearr)
+static inline bool hash_insert(struct db * d,
+                               hashtable_s * ht,
+                               struct bloom_s * b,
+                               uint64_t seed)
 {
-  /* set 2 */
-  /* find the first empty bucket */
-  uint64_t hash = db_gethash(d2, rearr);
-  uint64_t j = hash_getindex(hashtable, hash);
-  while (hash_is_occupied(hashtable, j))
-    j = hash_getnextindex(hashtable, j);
+  bool dup = false;
 
-  hash_set_occupied(hashtable, j);
-  hash_set_value(hashtable, j, hash);
-  hash_set_data(hashtable, j, rearr);
-  bloom_set(bloom_a, hash);
+  /* find the first empty bucket */
+  uint64_t hash = db_gethash(d, seed);
+  uint64_t j = hash_getindex(ht, hash);
+  while (hash_is_occupied(ht, j))
+    {
+#if 1
+      if (((b == nullptr) || bloom_get(b, hash)) &&
+          (hash_compare_value(ht, j, hash)))
+#else
+      if (hash_compare_value(ht, j, hash))
+#endif
+        {
+          uint64_t hit = hash_get_data(ht, j);
+
+          /* check repertoire id match */
+          unsigned int seed_rep_id = db_get_repertoire_id_no(d, seed);
+          unsigned int hit_rep_id = db_get_repertoire_id_no(d, hit);
+
+          if (seed_rep_id == hit_rep_id)
+            {
+              /* double check that everything matches */
+              unsigned int seed_v_gene = db_get_v_gene(d, seed);
+              unsigned int seed_j_gene = db_get_j_gene(d, seed);
+
+              unsigned int hit_v_gene = db_get_v_gene(d, hit);
+              unsigned int hit_j_gene = db_get_j_gene(d, hit);
+
+              if (opt_ignore_genes ||
+                  ((seed_v_gene == hit_v_gene) && (seed_j_gene == hit_j_gene)))
+                {
+                  unsigned char * seed_sequence
+                    = (unsigned char *) db_getsequence(d, seed);
+                  unsigned int seed_seqlen
+                    = db_getsequencelen(d, seed);
+                  unsigned char * hit_sequence
+                    = (unsigned char *) db_getsequence(d, hit);
+                  unsigned int hit_seqlen
+                    = db_getsequencelen(d, hit);
+
+                  if ((seed_seqlen == hit_seqlen) &&
+                      ! memcmp(seed_sequence, hit_sequence, seed_seqlen))
+                    {
+                      dup = true;
+                    }
+                }
+            }
+        }
+      j = hash_getnextindex(ht, j);
+    }
+
+  hash_set_occupied(ht, j);
+  hash_set_value(ht, j, hash);
+  hash_set_data(ht, j, seed);
+
+  if (b)
+    bloom_set(b, hash);
+
+  return dup;
 }
 
 static int set1_compare_by_repertoire_name(const void * a, const void * b)
@@ -490,6 +542,34 @@ static void show_matrix_value(unsigned int s, unsigned int t)
     }
 }
 
+uint64_t check_duplicates(struct db * d)
+{
+  /*
+    Test if there are any exact duplicates in the input
+    (same repertoire id, same sequence, same V-gene, same J-gene)
+
+    The Zobrist hashing must have already been set up.
+  */
+
+  uint64_t sequences = db_getsequencecount(d);
+  struct hashtable_s * ht = hash_init(sequences);
+  uint64_t dup = 0;
+
+  progress_init("Check duplicates: ", sequences);
+  for(uint64_t i=0; i < sequences; i++)
+    {
+      if (hash_insert(d, ht, nullptr, i))
+        dup++;
+      progress_update(i);
+    }
+  progress_done();
+
+  hash_exit(ht);
+  ht = nullptr;
+
+  return dup;
+}
+
 void overlap(char * set1_filename, char * set2_filename)
 {
   /* find overlaps between repertoires */
@@ -733,22 +813,35 @@ void overlap(char * set1_filename, char * set2_filename)
                    db_get_j_gene_count());
 
       db_hash(d1);
-      if (d2 != d1)
-        db_hash(d2);
 
-      /* compute hash for all sequences and store them in a hash table */
+      if (d2 != d1)
+        {
+          uint64_t dup1 = check_duplicates(d1);
+          if (dup1 > 0)
+            fprintf(logfile, "Warning: %" PRIu64 " duplicates detected in repertoire set 1\n",
+                    dup1);
+
+          db_hash(d2);
+        }
+
+      /* store sequences in a hash table */
       /* use an additional bloom filter for increased speed */
       /* hashing into hash table & bloom filter */
+      /* check for duplicates in set 2 */
 
+      uint64_t dup2 = 0;
       hashtable = hash_init(set2_sequences);
       bloom_a = bloom_init(hash_get_tablesize(hashtable));
       progress_init("Hashing sequences:", set2_sequences);
       for(uint64_t i=0; i < set2_sequences; i++)
         {
-          hash_insert_overlap(i);
+          if (hash_insert(d2, hashtable, bloom_a, i))
+            dup2++;
           progress_update(i);
         }
       progress_done();
+      if (dup2 > 0)
+        fprintf(logfile, "Warning: %" PRIu64 " duplicates detected in repertoire set 2\n", dup2);
     }
 
   if (opt_matrix)
