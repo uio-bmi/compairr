@@ -593,7 +593,6 @@ void overlap(char * set1_filename, char * set2_filename)
 
   uint64_t set1_sum_size = 0;
   uint64_t set1_sum_count = 0;
-  double set1_sum_sq_count = 0;
 
   /* determine number of sequences in each of the repertoires (Set 1) */
 
@@ -640,7 +639,6 @@ void overlap(char * set1_filename, char * set2_filename)
       unsigned int s = set1_lookup_repertoire[i];
       set1_sum_size += set1_repertoire_size[s];
       set1_sum_count += set1_repertoire_count[s];
-      set1_sum_sq_count += set1_repertoire_sq_count[s];
     }
 
   int w1 = MAX(1, 1 + floor(log10(set1_repertoires)));
@@ -674,7 +672,6 @@ void overlap(char * set1_filename, char * set2_filename)
 
   uint64_t set2_sum_size = 0;
   uint64_t set2_sum_count = 0;
-  double set2_sum_sq_count = 0;
 
   fprintf(logfile, "Immune receptor repertoire set 2\n\n");
 
@@ -735,7 +732,6 @@ void overlap(char * set1_filename, char * set2_filename)
           unsigned int s = set2_lookup_repertoire[i];
           set2_sum_size += set2_repertoire_size[s];
           set2_sum_count += set2_repertoire_count[s];
-          set2_sum_sq_count += set2_repertoire_sq_count[s];
         }
 
       int w1 = MAX(1, 1 + floor(log10(set2_repertoires)));
@@ -782,7 +778,6 @@ void overlap(char * set1_filename, char * set2_filename)
 
       set2_sum_size = set1_sum_size;
       set2_sum_count = set1_sum_count;
-      set2_sum_sq_count = set1_sum_sq_count;
 
       set2_repertoire_size = set1_repertoire_size;
       set2_repertoire_count = set1_repertoire_count;
