@@ -288,6 +288,7 @@ Short | Long               | Argument | Default  | Description
 `-u`  | `--ignore-unknown` |          |          | Ignore sequences including unknown residue symbols
 `-v`  | `--version`        |          |          | Display version information
 `-x`  | `--existence`      |          |          | Check existence of sequences in repertoires
+`-z`  | `--deduplicate`    |          |          | Deduplicate sequences
 
 
 ## Example 1: Repertoire overlap
