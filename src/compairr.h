@@ -147,6 +147,7 @@ extern bool opt_indels;
 extern bool opt_matrix;
 extern bool opt_nucleotides;
 extern bool opt_version;
+extern bool opt_deduplicate;
 extern char * opt_log;
 extern char * opt_output_file;
 extern char * opt_pairs;
@@ -171,3 +172,4 @@ extern FILE * pairsfile;
 #include "threads.h"
 #include "variants.h"
 #include "zobrist.h"
+#include "dedup.h"

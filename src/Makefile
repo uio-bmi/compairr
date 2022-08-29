@@ -70,11 +70,11 @@ CXXFLAGS = $(COMMON) $(WARNINGS)
 
 PROG = compairr
 
-OBJS = arch.o bloompat.o cluster.o compairr.o db.o hashtable.o \
+OBJS = arch.o bloompat.o cluster.o compairr.o db.o dedup.o hashtable.o \
 	overlap.o util.o variants.o zobrist.o
 
 DEPS = Makefile threads.h \
-	arch.h bloompat.h cluster.h compairr.h db.h hashtable.h \
+	arch.h bloompat.h cluster.h compairr.h db.h dedup.h hashtable.h \
 	overlap.h util.h variants.h zobrist.h
 
 all : $(PROG)

@@ -57,6 +57,7 @@ bool opt_indels;
 bool opt_matrix;
 bool opt_nucleotides;
 bool opt_version;
+bool opt_deduplicate;
 char * opt_log;
 char * opt_output;
 char * opt_pairs;
@@ -126,11 +127,13 @@ void show_time(const char * prompt)
 void args_show()
 {
   if (opt_matrix)
-    fprintf(logfile, "Command (m/c/x):   Overlap (-m)\n");
+    fprintf(logfile, "Command:           Overlap (-m)\n");
   if (opt_cluster)
-    fprintf(logfile, "Command (m/c/x):   Cluster (-c)\n");
+    fprintf(logfile, "Command:           Cluster (-c)\n");
   if (opt_existence)
-    fprintf(logfile, "Command (m/c/x):   Existence (-x)\n");
+    fprintf(logfile, "Command:           Existence (-x)\n");
+  if (opt_deduplicate)
+    fprintf(logfile, "Command:           Deduplicate (--deduplicate)\n");
 
   if (opt_matrix)
     fprintf(logfile, "Repertoire set 1:  %s\n", input1_filename);
@@ -171,6 +174,7 @@ void args_usage()
   fprintf(stderr, " -m, --matrix                compute overlap matrix between two sets\n");
   fprintf(stderr, " -x, --existence             check existence of sequences in repertoires\n");
   fprintf(stderr, " -c, --cluster               cluster sequences in one repertoire\n");
+  fprintf(stderr, " -z, --deduplicate           deduplicate sequences in repertoires\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "General options:\n");
   fprintf(stderr, " -d, --differences INTEGER   number of differences accepted (0*)\n");
@@ -212,6 +216,7 @@ void args_init(int argc, char **argv)
   opt_matrix = false;
   opt_existence = false;
   opt_cluster = false;
+  opt_deduplicate = false;
   opt_differences = 0;
   opt_indels = false;
   opt_ignore_counts = false;
@@ -228,7 +233,7 @@ void args_init(int argc, char **argv)
 
   opterr = 1;
 
-  char short_options[] = "acd:fghil:mno:p:s:t:uvx";
+  char short_options[] = "acd:fghil:mno:p:s:t:uvxz";
 
   /* unused short option letters: bejkqruwxyz */
 
@@ -252,6 +257,7 @@ void args_init(int argc, char **argv)
     {"ignore-unknown",   no_argument,       nullptr, 'u' },
     {"version",          no_argument,       nullptr, 'v' },
     {"existence",        no_argument,       nullptr, 'x' },
+    {"deduplicate",      no_argument,       nullptr, 'z' },
     {nullptr,            0,                 nullptr, 0   }
   };
 
@@ -379,6 +385,11 @@ void args_init(int argc, char **argv)
         opt_existence = true;
         break;
 
+      case 'z':
+        /* deduplicate */
+        opt_deduplicate = true;
+        break;
+
       default:
         show_header();
         args_usage();
@@ -386,11 +397,11 @@ void args_init(int argc, char **argv)
     }
   }
 
-  int cmd_count = opt_help + opt_version + opt_matrix + opt_cluster + opt_existence;
+  int cmd_count = opt_help + opt_version + opt_matrix + opt_cluster + opt_existence + opt_deduplicate;
   if (cmd_count == 0)
-    fatal("Please specify a command (-h, -v, -c, -m or -x)");
+    fatal("Please specify a command (--help, --version, --matrix, --existence, --cluster, or --deduplicate)");
   if (cmd_count > 1)
-    fatal("Please specify just one command (-h, -v, -c, -m or -x)");
+    fatal("Please specify just one command (--help, --version, --matrix, --existence, --cluster, or --deduplicate)");
 
   if (opt_help || opt_version)
     {
@@ -426,7 +437,7 @@ void args_init(int argc, char **argv)
           fatal("Incorrect number of arguments. Two input files must be specified.");
         }
     }
-  else if (opt_cluster)
+  else if (opt_cluster || opt_deduplicate)
     {
       if (optind + 1 == argc)
         {
@@ -437,6 +448,15 @@ void args_init(int argc, char **argv)
           fatal("Incorrect number of arguments. One input file must be specified.");
         }
     }
+
+  if (opt_deduplicate)
+    {
+      if (opt_differences != 0)
+        fatal("Option -d or --differences must be 0 for deduplication.");
+      if (opt_indels)
+        fatal("Option -i or --indels is not allowed for deduplication.");
+    }
+
 
   if ((opt_threads < 1) || (opt_threads > MAX_THREADS))
     {
@@ -570,6 +590,8 @@ int main(int argc, char** argv)
 
   if (opt_matrix || opt_existence)
     overlap(input1_filename, input2_filename);
+  else if (opt_deduplicate)
+    dedup(input1_filename);
   else
     cluster(input1_filename);
 
