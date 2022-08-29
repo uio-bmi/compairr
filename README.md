@@ -44,8 +44,8 @@ Use the `-h` or `--help` option to show some help information.
 Run the program with `-v` or `--version` for version information.
 
 The type of operation that should be performed is specified with one
-of the options `-m`, `-x` or `-c` (or the corresponding long option
-forms `--matrix`, `--existence`, or `--cluster`).
+of the options `-m`, `-x`, `-c` or `-z` (or the corresponding long option
+forms `--matrix`, `--existence`, `--cluster`, or `--deduplicate`).
 
 The code is multi-threaded. The number of threads may be specified
 with the `-t` or `--threads` option.
@@ -107,7 +107,9 @@ CompAIRR assumes that all sequences within each repertoire are
 distinct, and that the abundance of each sequence is indicated in the
 `duplicate_count` field in the input file. Duplicated sequences,
 i.e. identical sequences (with the same V and J genes) within the same
-repertoire, may lead to unexpected results.
+repertoire, may lead to unexpected results. CompAIRR will warn if it
+detects duplicates. Duplicates may be merged with the `--deduplicate`
+command.
 
 The similar sequences of each repertoire in each set are found by
 comparing the sequences and their V and J genes.  The duplicate count
@@ -203,6 +205,35 @@ of the cluster. The subsequent columns are `repertoire_id`,
 or `junction_aa`.
 
 The clusters are sorted by size, in descending order.
+
+
+## Deduplication
+
+The `--deduplicate` command may be used to deduplicate a data set by
+merging entries in the same repertoire with identical sequences and
+identical V and J genes. This may be necessary to get correct results
+when computing overlaps between repertoires. Duplicates may be present
+for instance in cases were the data set contains both nucleotide and
+amino acid sequences from the same rearrangement, where the nucleotide
+sequences may be distinct while the amino acid sequences may not be,
+due to the degeneracy of the genetic code.
+
+One input file in TSV format must be specified on the command line.
+
+Strictly identical sequences in the same repertoire will be merged and
+their counts will be added together. If the `-g` or `--ignore_genes`
+option is specified, the V and J genes are ignored. The `-n` or
+`--nucleotides` option may be specified if the input is nucleotide
+sequences, otherwise amino acid sequences will be assumed. If the `-f`
+or `--ignore_counts` option is specified, the counts in the input file
+will be ignored, and just the number of identical sequences will be
+counted.
+
+The output will be in a similar TSV format as the input file, with the
+following columns: `repertoire_id`, `duplicate_count`, `v_call`,
+`j_call`, and `junction_aa`. If nucleotide sequences are specified the
+last column will be `junction`. If the `-g` or `--ignore_genes` option
+is specified, the `v_call` and `j_call` columns will not be included.
 
 
 ## Input files
@@ -573,6 +604,69 @@ The result in the file `output.tsv` looks like this:
 In this case, there are 2 clusters. The first contains 2 sequences (T
 and U from B1), while the second cluster contains 1 sequence (V from
 B2). The sequences are clustered across repertoires.
+
+
+## Example 4: Deduplication
+
+This time we will deduplicate the amino acid sequences in the file
+`setb.tsv` using the `-z` or `--deduplicate` option.
+
+The command line to run is:
+
+`compairr -z setb.tsv -o output.tsv`
+
+The output will look like this:
+
+```
+CompAIRR 1.7.0 - Comparison of Adaptive Immune Receptor Repertoires
+https://github.com/uio-bmi/compairr
+
+Start time:        Mon Aug 29 17:16:13 CEST 2022
+Command:           Deduplicate (--deduplicate)
+Repertoire:        setb.tsv
+Nucleotides (n):   No
+Differences (d):   0
+Indels (i):        No
+Ignore counts (f): No
+Ignore genes (g):  No
+Ign. unknown (u):  No
+Threads (t):       1
+Output file (o):   output.tsv
+Log file (l):      (stderr)
+
+Reading sequences: 100% (0s)
+Repertoires:       2
+Sequences:         3
+Residues:          39
+Shortest:          11
+Longest:           14
+Average length:    13.0
+Total dupl. count: 22
+Indexing:          100% (0s)
+Unique V genes:    2
+Unique J genes:    2
+Computing hashes:  100% (0s)
+Deduplicating:     100% (0s)
+Duplicates merged: 0
+Writing output:    100% (0s)
+
+End time:          Mon Aug 29 17:16:13 CEST 2022
+```
+
+The result in the file `output.tsv` looks like this:
+
+```tsv
+repertoire_id	duplicate_count	v_call	j_call	junction_aa
+B1	5	TCRBV07-09	TCRBJ01-02	CASSLRVGGYGYTF
+B1	10	TCRBV07-09	TCRBJ01-02	CASSLRVGGFGYTF
+B2	7	TCRBV07-06	TCRBJ02-01	CASSTSHQQYF
+```
+
+There were no duplicates in this dataset so the output is essentially
+identical to the input data, but does not include all the original
+columns. If the two sequences in repertoire B1 had been identical, the
+two lines would have been merged and the new `duplicate_count` would
+have been 15.
 
 
 ## Implementation
