@@ -48,7 +48,7 @@ static void report(struct db * d,
   const char * seed_j_gene_name = db_get_j_gene_name(d, seed);
 
   fprintf(outfile, "%s", seed_rep_id);
-  fprintf(outfile, "\t%llu", count);
+  fprintf(outfile, "\t%" PRIu64, count);
   if (! opt_ignore_genes)
     fprintf(outfile, "\t%s\t%s", seed_v_gene_name, seed_j_gene_name);
   fprintf(outfile, "\t");

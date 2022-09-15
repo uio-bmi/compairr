@@ -619,10 +619,10 @@ The command line to run is:
 The output will look like this:
 
 ```
-CompAIRR 1.7.0 - Comparison of Adaptive Immune Receptor Repertoires
+CompAIRR 1.8.0 - Comparison of Adaptive Immune Receptor Repertoires
 https://github.com/uio-bmi/compairr
 
-Start time:        Mon Aug 29 17:16:13 CEST 2022
+Start time:        Thu Sep 15 17:10:51 CEST 2022
 Command:           Deduplicate (--deduplicate)
 Repertoire:        setb.tsv
 Nucleotides (n):   No
@@ -651,7 +651,7 @@ Deduplicating:     100% (0s)
 Duplicates merged: 0
 Writing output:    100% (0s)
 
-End time:          Mon Aug 29 17:16:13 CEST 2022
+End time:          Thu Sep 15 17:10:51 CEST 2022
 ```
 
 The result in the file `output.tsv` looks like this:
