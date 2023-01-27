@@ -67,6 +67,11 @@ symbol is encountered in a sequence, unless one specifies the `-u` or
 `--ignore-unknown` option, in which case CompAIRR will simply ignore
 that sequence.
 
+By default, the sequences should be given in the `junction` or
+`junction_aa` column of the input file, for nucleotide and amino acid
+sequences, respectively. Alternatively, the sequences may be present
+in the `cdr3` or `cdr3_aa` column, if the `--cdr3` option is given.
+
 The user can specify how many differences are allowed when comparing
 sequences, using the option `-d` or `--differences`. To allow indels
 (insertions or deletions) the option `-i` or `--indels` may be
@@ -95,9 +100,11 @@ preceding option letter. If only one filename is specified on the
 command line, or the same filename is specified twice, it is assumed
 that the set should be compared to itself. Each file must contain the
 repertoire ID and either the nucleotide or the amino acid sequence of
-the rearrangement. A sequence ID may also be included. Unless they
-should be ignored, the V gene, the J gene, and the duplicate count is
-also needed.
+the rearrangement. If the repertoire ID column is missing, all
+sequences are assumed to belong to the same repertoire (with ID 1 or
+2, respectively, for the two sets). A sequence ID may also be
+included. Unless they should be ignored, the V gene, the J gene, and
+the duplicate count is also needed.
 
 Each set can contain many repertoires and each repertoire can contain
 many sequences. The tool will find the sequences in the two sets that
@@ -145,12 +152,13 @@ If the `-p` or `--pairs` option is specified, CompAIRR will write
 information about all pairs of matching sequences to a specified TSV
 file. The following information will be included in the output:
 `repertoire_id_1`, `sequence_id_1`, `duplicate_count_1`, `v_call_1`,
-`j_call_1`, `junction_1` or `junction_aa_1`, `repertoire_id_2`,
-`sequence_id_2`, `duplicate_count_2`, `v_call_2`, `j_call_2`, and
-`junction_2` or `junction_aa_2`. Please note that such files may grow
-very large when there are many matches. Use of multithreading may be
-of little use in this case. The order of the lines in the file is
-unspecified.
+`j_call_1`, `junction_1`, `repertoire_id_2`, `sequence_id_2`,
+`duplicate_count_2`, `v_call_2`, `j_call_2`, and `junction_2`. The term
+`junction` will be replaced with `junction_aa`, `cdr3` or `cdr3_aa` as
+appropriate, depending on the options specified. Please note that such
+files may grow very large when there are many matches. Use of
+multithreading may be of little use in this case. The order of the
+lines in the file is unspecified.
 
 
 ## Analysing in which repertoires a set of sequences are present
@@ -164,7 +172,8 @@ different sequences to analyse. The `sequence_id` column must be
 present in this file. If the optional `repertoire_id` column is
 present, all those identifiers must be identical. The second file must
 contain the repertoires to match. The `repertoire_id` column must be
-present in the second file.
+present in the second file, otherwise the ID will be set to 2 for all
+sequences.
 
 CompAIRR will identify in which repertoires each sequence is present
 and will output the results either as a matrix or as a three-column
@@ -195,14 +204,15 @@ clustering, according to the specified distance and indel options
 be taken into account unless the `-g` or `--ignore-genes` option is
 specified. The options `-n` or `--nucleotides` indicate that the
 comparison should be performed with nucleotide sequences, not amino
-acid sequences.
+acid sequences. If the repertoire ID column is missing, all
+sequences are assumed to belong to the same repertoire (with ID 1).
 
 The output will be in a similar TSV format as the input file, but
 preceded with two additional columns. The first column will contain a
 cluster number, starting at 1. The second column will contain the size
 of the cluster. The subsequent columns are `repertoire_id`,
 `sequence_id`, `duplicate_count`, `v_call`, `j_call`, and `junction`
-or `junction_aa`.
+(or `junction_aa`, `cdr3` or `cdr3_aa`, as appropriate).
 
 The clusters are sorted by size, in descending order.
 
@@ -227,7 +237,8 @@ option is specified, the V and J genes are ignored. The `-n` or
 sequences, otherwise amino acid sequences will be assumed. If the `-f`
 or `--ignore_counts` option is specified, the counts in the input file
 will be ignored, and just the number of identical sequences will be
-counted.
+counted. If the repertoire ID column is missing, all sequences are
+assumed to belong to the same repertoire (with ID 1).
 
 The output will be in a similar TSV format as the input file, with the
 following columns: `repertoire_id`, `duplicate_count`, `v_call`,
@@ -247,13 +258,15 @@ documentation](https://docs.airr-community.org/en/stable/).
 The first line must contain the header. The rest of the file must
 contain one line per sequence. The following fields should be included:
 
-* `repertoire_id`: identifier of the repertoire (required except for first file when using `-x` or `--existence`)
+* `repertoire_id`: identifier of the repertoire
 * `sequence_id`: identifier of the sequence (optional except for for first file when using `-x` or `--existence`)
 * `duplicate_count`: number of identical copies of the same rearrangement (required unless `-f` option given)
 * `v_call`: V gene name with allele (required unless `-g` option given)
 * `j_call`: J gene name with allele (required unless `-g` option given)
-* `junction`: nucleotide sequence (required if `-n` option given)
-* `junction_aa`: amino acid sequence (single letter code) (required unless `-n` option given)
+* `junction`: nucleotide sequence (required if `-n` option given and `--cdr3` option not given)
+* `junction_aa`: amino acid sequence (single letter code) (required unless `-n` or `--cdr3` options given)
+* `cdr3`: nucleotide sequence (required if both `-n` and `--cdr3` options given)
+* `cdr_aa`: amino acid sequence (single letter code) (required if `--cdr3` option given and `-n` option not given)
 
 See below for an example. Other fields may be included, but will be
 ignored.
@@ -272,6 +285,7 @@ Exactly one of the command options `-m`, `-x` or `-c` (or their long forms) must
 Short | Long               | Argument | Default  | Description
 ------|--------------------|----------|----------|-------------
 `-a`  | `--alternative`    |          |          | Output results in three-column format, not matrix
+      | `--cdr3`           |          |          | Use the `cdr3` or `cdr3_aa` column instead of `junction` or `junction_aa`
 `-c`  | `--cluster`        |          |          | Cluster sequences in one repertoire
 `-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted
 `-f`  | `--ignore-counts`  |          |          | Ignore duplicate count information
