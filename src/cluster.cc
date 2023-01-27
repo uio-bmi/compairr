@@ -305,7 +305,7 @@ void cluster(char * filename)
   db_init();
 
   d = db_create();
-  db_read(d, filename, false, false);
+  db_read(d, filename, false, "1");
 
   unsigned int longest = db_getlongestsequence(d);
   seqcount = db_getsequencecount(d);

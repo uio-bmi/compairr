@@ -582,7 +582,7 @@ void overlap(char * set1_filename, char * set2_filename)
   fprintf(logfile, "Immune receptor repertoire set 1\n\n");
 
   d1 = db_create();
-  db_read(d1, set1_filename, opt_matrix, opt_existence);
+  db_read(d1, set1_filename, opt_existence, "1");
 
   set1_longestsequence = db_getlongestsequence(d1);
   set1_sequences = db_getsequencecount(d1);
@@ -678,7 +678,7 @@ void overlap(char * set1_filename, char * set2_filename)
   if (set2_filename && strcmp(set1_filename, set2_filename))
     {
       d2 = db_create();
-      db_read(d2, set2_filename, true, false);
+      db_read(d2, set2_filename, false, "2");
 
       set2_longestsequence = db_getlongestsequence(d2);
       set2_sequences = db_getsequencecount(d2);

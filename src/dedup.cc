@@ -139,7 +139,7 @@ void dedup(char * filename)
 
   struct db * d1 = db_create();
 
-  db_read(d1, filename, false, false);
+  db_read(d1, filename, false, "1");
 
   unsigned int longestsequence = db_getlongestsequence(d1);
   uint64_t sequences = db_getsequencecount(d1);

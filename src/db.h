@@ -37,8 +37,8 @@ void db_free(struct db * d);
 
 void db_read(struct db * d,
              const char * filename,
-             bool require_repertoire_id,
-             bool require_sequence_id);
+             bool require_sequence_id,
+             const char * default_repertoire_id);
 
 uint64_t db_getsequencecount(struct db * d);
 

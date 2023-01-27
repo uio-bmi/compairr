@@ -168,7 +168,6 @@ struct db * db_create()
 
 void parse_airr_tsv_header(char * line,
                            struct db * d,
-                           bool require_repertoire_id,
                            bool require_sequence_id)
 {
   char delim[] = "\t";
@@ -218,8 +217,7 @@ void parse_airr_tsv_header(char * line,
       i++;
     }
 
-  if (! (d->col_repertoire_id   || ! require_repertoire_id) ||
-      ! (d->col_sequence_id     || ! require_sequence_id)   ||
+  if (! (d->col_sequence_id     || ! require_sequence_id)   ||
       ! (d->col_duplicate_count ||   opt_ignore_counts)     ||
       ! (d->col_v_call          ||   opt_ignore_genes)      ||
       ! (d->col_j_call          ||   opt_ignore_genes)      ||
@@ -231,8 +229,6 @@ void parse_airr_tsv_header(char * line,
       fprintf(logfile,
         "\nMissing essential column(s) in header of AIRR TSV input file:");
 
-      if (require_repertoire_id && (! d->col_repertoire_id))
-        fprintf(logfile, " repertoire_id");
       if (require_sequence_id && (! d->col_sequence_id))
         fprintf(logfile, " sequence_id");
       if ((! opt_ignore_counts) && (! d->col_duplicate_count))
@@ -279,8 +275,8 @@ void parse_airr_tsv_header(char * line,
 void parse_airr_tsv_line(char * line,
                          uint64_t lineno,
                          struct db * d,
-                         bool require_repertoire_id,
-                         bool require_sequence_id)
+                         bool require_sequence_id,
+                         const char * default_repertoire_id)
 {
   const char * repertoire_id = nullptr;
   const char * sequence_id = nullptr;
@@ -457,18 +453,9 @@ void parse_airr_tsv_line(char * line,
 
   /* handle repertoire_id */
 
-  if (require_repertoire_id && ! (repertoire_id && *repertoire_id))
-    {
-      fprintf(logfile,
-              "\n\nError: missing or empty repertoire_id value on line %"
-              PRIu64 "\n",
-              lineno);
-      exit(1);
-    }
-
   if (! repertoire_id)
     {
-      repertoire_id = EMPTYSTRING;
+      repertoire_id = default_repertoire_id;
     }
 
   auto r_it = d->repertoire_id_map.find(repertoire_id);
@@ -638,8 +625,8 @@ void parse_airr_tsv_line(char * line,
 
 void db_read(struct db * d,
              const char * filename,
-             bool require_repertoire_id,
-             bool require_sequence_id)
+             bool require_sequence_id,
+             const char * default_repertoire_id)
 {
   FILE * fp = nullptr;
   if (filename)
@@ -721,7 +708,6 @@ void db_read(struct db * d,
             {
               parse_airr_tsv_header(line,
                                     d,
-                                    require_repertoire_id,
                                     require_sequence_id);
               state = 1;
             }
@@ -731,8 +717,8 @@ void db_read(struct db * d,
           parse_airr_tsv_line(line,
                               lineno,
                               d,
-                              require_repertoire_id,
-                              require_sequence_id);
+                              require_sequence_id,
+                              default_repertoire_id);
         }
 
       /* update progress */
