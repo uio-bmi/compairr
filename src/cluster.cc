@@ -428,8 +428,7 @@ void cluster(char * filename)
   progress_init("Writing clusters: ", seqcount);
   fprintf(outfile,
           "#cluster_no\tcluster_size\trepertoire_id\tsequence_id\t"
-          "duplicate_count\tv_call\tj_call\t%s\n",
-          opt_nucleotides ? "junction" : "junction_aa");
+          "duplicate_count\tv_call\tj_call\t%s\n", seq_header);
   for(unsigned int i = 0; i < clustercount; i++)
     {
       unsigned int seed = clusterinfo[i].seed;

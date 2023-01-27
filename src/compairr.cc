@@ -47,6 +47,7 @@ static char * input1_filename;
 static char * input2_filename;
 
 bool opt_alternative;
+bool opt_cdr3;
 bool opt_cluster;
 bool opt_existence;
 bool opt_help;
@@ -67,6 +68,8 @@ int64_t opt_score_int;
 int64_t opt_threads;
 
 /* Other variables */
+
+const char * seq_header = nullptr;
 
 FILE * outfile = nullptr;
 FILE * logfile = nullptr;
@@ -153,6 +156,8 @@ void args_show()
           opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Ign. unknown (u):  %s\n",
           opt_ignore_unknown ? "Yes" : "No");
+  fprintf(logfile, "Use cdr3 column:   %s\n",
+          opt_cdr3 ? "Yes" : "No");
   fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
   fprintf(logfile, "Output file (o):   %s\n", opt_output);
   if (opt_matrix || opt_existence)
@@ -188,6 +193,7 @@ void args_usage()
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
+  fprintf(stderr, "     --cdr3                  use the cdr3(_aa) column instead of junction(_aa)\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr*)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout*)\n");
   fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none*)\n");
@@ -211,35 +217,37 @@ void args_init(int argc, char **argv)
   input1_filename = nullptr;
   input2_filename = nullptr;
 
-  opt_help = false;
-  opt_version = false;
-  opt_matrix = false;
-  opt_existence = false;
+  opt_alternative = false;
+  opt_cdr3 = false;
   opt_cluster = false;
   opt_deduplicate = false;
   opt_differences = 0;
-  opt_indels = false;
+  opt_existence = false;
+  opt_help = false;
   opt_ignore_counts = false;
   opt_ignore_genes = false;
   opt_ignore_unknown = false;
+  opt_indels = false;
+  opt_log = nullptr;
+  opt_matrix = false;
   opt_nucleotides = false;
+  opt_output = DASH_FILENAME;
+  opt_pairs = nullptr;
   opt_score_int = 0;
   opt_score_string = NULL;
   opt_threads = 1;
-  opt_alternative = false;
-  opt_pairs = nullptr;
-  opt_log = nullptr;
-  opt_output = DASH_FILENAME;
+  opt_version = false;
 
   opterr = 1;
 
   char short_options[] = "acd:fghil:mno:p:s:t:uvxz";
 
-  /* unused short option letters: bejkqruwxyz */
+  /* unused short option letters: bejkqrwy */
 
   static struct option long_options[] =
   {
     {"alternative",      no_argument,       nullptr, 'a' },
+    {"cdr3",             no_argument,       nullptr, 0   },
     {"cluster",          no_argument,       nullptr, 'c' },
     {"differences",      required_argument, nullptr, 'd' },
     {"ignore-counts",    no_argument,       nullptr, 'f' },
@@ -390,6 +398,22 @@ void args_init(int argc, char **argv)
         opt_deduplicate = true;
         break;
 
+      case 0:
+        /* long options only */
+        switch (option_index)
+          {
+          case 1:
+            /* cdr3 */
+            opt_cdr3 = true;
+            break;
+
+          default:
+            show_header();
+            args_usage();
+            exit(1);
+          }
+        break;
+
       default:
         show_header();
         args_usage();
@@ -524,6 +548,17 @@ void args_init(int argc, char **argv)
     alphabet_size = 4;
   else
     alphabet_size = 20;
+
+  if (opt_cdr3)
+    if (opt_nucleotides)
+      seq_header = "cdr3";
+    else
+      seq_header = "cdr3_aa";
+  else
+    if (opt_nucleotides)
+      seq_header = "junction";
+    else
+      seq_header = "junction_aa";
 }
 
 void open_files()

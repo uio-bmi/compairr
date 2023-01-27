@@ -138,6 +138,7 @@ enum
 
 extern bool opt_alternative;
 extern bool opt_cluster;
+extern bool opt_cdr3;
 extern bool opt_existence;
 extern bool opt_help;
 extern bool opt_ignore_counts;
@@ -155,6 +156,8 @@ extern char * opt_score_string;
 extern int64_t opt_differences;
 extern int64_t opt_score_int;
 extern int64_t opt_threads;
+
+extern const char * seq_header;
 
 extern FILE * outfile;
 extern FILE * logfile;

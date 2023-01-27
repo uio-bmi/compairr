@@ -870,18 +870,12 @@ void overlap(char * set1_filename, char * set2_filename)
 
   if (opt_pairs)
     {
-      if (opt_nucleotides)
-        fprintf(pairsfile,
-                "#repertoire_id_1\tsequence_id_1\t"
-                "duplicate_count_1\tv_call_1\tj_call_1\tjunction_1\t"
-                "repertoire_id_2\tsequence_id_2\t"
-                "duplicate_count_2\tv_call_2\tj_call_2\tjunction_2\n");
-      else
-        fprintf(pairsfile,
-                "#repertoire_id_1\tsequence_id_1\t"
-                "duplicate_count_1\tv_call_1\tj_call_1\tjunction_aa_1\t"
-                "repertoire_id_2\tsequence_id_2\t"
-                "duplicate_count_2\tv_call_2\tj_call_2\tjunction_aa_2\n");
+      fprintf(pairsfile,
+              "#repertoire_id_1\tsequence_id_1\t"
+              "duplicate_count_1\tv_call_1\tj_call_1\t%s_1\t"
+              "repertoire_id_2\tsequence_id_2\t"
+              "duplicate_count_2\tv_call_2\tj_call_2\t%s_2\n",
+              seq_header, seq_header);
     }
   if (opt_threads == 1)
     {

@@ -178,9 +178,7 @@ void dedup(char * filename)
   fprintf(outfile, "\tduplicate_count");
   if (! opt_ignore_genes)
     fprintf(outfile, "\tv_call\tj_call");
-  fprintf(outfile, "\t");
-  fprintf(outfile, opt_nucleotides ? "junction" : "junction_aa");
-  fprintf(outfile, "\n");
+  fprintf(outfile, "\t%s\n", seq_header);
 
   progress_init("Deduplicating:    ", sequences);
   for(uint64_t i=0; i < sequences; i++)
