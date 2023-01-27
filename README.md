@@ -242,9 +242,9 @@ assumed to belong to the same repertoire (with ID 1).
 
 The output will be in a similar TSV format as the input file, with the
 following columns: `repertoire_id`, `duplicate_count`, `v_call`,
-`j_call`, and `junction_aa`. If nucleotide sequences are specified the
-last column will be `junction`. If the `-g` or `--ignore_genes` option
-is specified, the `v_call` and `j_call` columns will not be included.
+`j_call`, and `junction` (or `junction_aa`, `cdr3` or `cdr3_aa`, as
+appropriate). If the `-g` or `--ignore_genes` option is specified, the
+`v_call` and `j_call` columns will not be included.
 
 
 ## Input files
