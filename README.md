@@ -285,7 +285,7 @@ Exactly one of the command options `-m`, `-x` or `-c` (or their long forms) must
 Short | Long               | Argument | Default  | Description
 ------|--------------------|----------|----------|-------------
 `-a`  | `--alternative`    |          |          | Output results in three-column format, not matrix
-      | `--cdr3`           |          |          | Use the `cdr3` or `cdr3_aa` column instead of `junction` or `junction_aa`
+``    | `--cdr3`           |          |          | Use the `cdr3` or `cdr3_aa` column instead of `junction` or `junction_aa`
 `-c`  | `--cluster`        |          |          | Cluster sequences in one repertoire
 `-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted
 `-f`  | `--ignore-counts`  |          |          | Ignore duplicate count information
