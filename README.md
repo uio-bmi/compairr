@@ -157,11 +157,16 @@ columns from both input files will be included in the output:
 `repertoire_id`, `sequence_id`, `duplicate_count`, `v_call`, `j_call`,
 and `junction`. The term `junction` will be replaced with
 `junction_aa`, `cdr3`, or `cdr3_aa` as appropriate. Additional columns
-from the input files may be copied to the output file using the `-k`
-or `--keep_columns` option. Multiple columns, separated by commas (but
-no spaces), may be given. A warning will be given if any of the
-specified columns are missing. In the header, columns from the first
-and second input file will be suffixed by `_1` and `_2`, respectively.
+from the input files may be copied to the pairs file using the `-k` or
+`--keep-columns` option. Multiple columns, separated by commas (but no
+spaces), may be given. A warning will be given if any of the specified
+columns are missing. In the header, columns from the first and second
+input file will be suffixed by `_1` and `_2`, respectively. The
+distance between the sequences will be included if the `--distance`
+option is included. This is usually the Hamming distance (minimum
+number of substitutions), unless the `--indel` (or `-i´) option is
+specified, in which case the distance is the Levenshtein distance
+(minimum number of substitutions or indels).
 
 
 ## Analysing in which repertoires a set of sequences are present
@@ -291,11 +296,12 @@ Short | Long               | Argument | Default  | Description
 `  `  | `--cdr3`           |          |          | Use the `cdr3` or `cdr3_aa` column instead of `junction` or `junction_aa`
 `-c`  | `--cluster`        |          |          | Cluster sequences in one repertoire
 `-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted
+`  `  | `--distance`       |          |          | Include sequence distance in pairs file
 `-f`  | `--ignore-counts`  |          |          | Ignore duplicate count information
 `-g`  | `--ignore-genes`   |          |          | Ignore V and J gene information
 `-h`  | `--help`           |          |          | Display help text and exit
 `-i`  | `--indels`         |          |          | Allow insertions or deletions
-`-k`  | `--keep_columns`   | STRING   |          | Copy given comma-separated columns to pairs file
+`-k`  | `--keep-columns`   | STRING   |          | Copy given comma-separated columns to pairs file
 `-l`  | `--log`            | FILENAME | (stderr) | Log to specified file instead of stderr
 `-m`  | `--matrix`         |          |          | Compute overlap matrix between two sets
 `-n`  | `--nucleotides`    |          |          | Compare nucleotides, not amino acids

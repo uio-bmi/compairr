@@ -49,6 +49,7 @@ static char * input2_filename;
 bool opt_alternative;
 bool opt_cdr3;
 bool opt_cluster;
+bool opt_distance;
 bool opt_existence;
 bool opt_help;
 bool opt_ignore_counts;
@@ -262,7 +263,8 @@ void args_usage()
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
   fprintf(stderr, "     --cdr3                  use the cdr3(_aa) column instead of junction(_aa)\n");
-  fprintf(stderr, "     --keep_columns STRING   comma-separated columns to copy to pairs file\n");
+  fprintf(stderr, "     --distance              include sequence distance in pairs file\n");
+  fprintf(stderr, " -k, --keep-columns STRING   comma-separated columns to copy to pairs file\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr*)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout*)\n");
   fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none*)\n");
@@ -290,6 +292,7 @@ void args_init(int argc, char **argv)
   opt_cdr3 = false;
   opt_cluster = false;
   opt_deduplicate = false;
+  opt_distance = false;
   opt_differences = 0;
   opt_existence = false;
   opt_help = false;
@@ -320,11 +323,12 @@ void args_init(int argc, char **argv)
     {"cdr3",             no_argument,       nullptr, 0   },
     {"cluster",          no_argument,       nullptr, 'c' },
     {"differences",      required_argument, nullptr, 'd' },
+    {"distance",         no_argument,       nullptr, 0   },
     {"ignore-counts",    no_argument,       nullptr, 'f' },
     {"ignore-genes",     no_argument,       nullptr, 'g' },
     {"help",             no_argument,       nullptr, 'h' },
     {"indels",           no_argument,       nullptr, 'i' },
-    {"keep_columns",     required_argument, nullptr, 'k' },
+    {"keep-columns",     required_argument, nullptr, 'k' },
     {"log",              required_argument, nullptr, 'l' },
     {"matrix",           no_argument,       nullptr, 'm' },
     {"nucleotides",      no_argument,       nullptr, 'n' },
@@ -339,6 +343,32 @@ void args_init(int argc, char **argv)
     {"deduplicate",      no_argument,       nullptr, 'z' },
     {nullptr,            0,                 nullptr, 0   }
   };
+
+  enum
+    {
+      option_alternative,
+      option_cdr3,
+      option_cluster,
+      option_differences,
+      option_distance,
+      option_ignore_counts,
+      option_ignore_genes,
+      option_help,
+      option_indels,
+      option_keep_columns,
+      option_log,
+      option_matrix,
+      option_nucleotides,
+      option_output,
+      option_pairs,
+      option_score,
+      option_summands,
+      option_threads,
+      option_ignore_unknown,
+      option_version,
+      option_existence,
+      option_deduplicate
+    };
 
   int used_options[26] = { 0, 0, 0, 0, 0,
                            0, 0, 0, 0, 0,
@@ -476,16 +506,17 @@ void args_init(int argc, char **argv)
 
       case 0:
         /* long options only */
+
         switch (option_index)
           {
-          case 1:
+          case option_cdr3:
             /* cdr3 */
             opt_cdr3 = true;
             break;
 
-          case 8:
-            /* keep_columns */
-            opt_keep_columns = optarg;
+          case option_distance:
+            /* distance */
+            opt_distance = true;
             break;
 
           default:
@@ -565,9 +596,9 @@ void args_init(int argc, char **argv)
   if (opt_keep_columns)
     {
       if (! opt_pairs)
-        fatal("Option --keep_columns only allowed with --pairs options.");
+        fatal("Option --keep-columns only allowed with --pairs options.");
       if (! parse_keep_columns())
-        fatal("Illegal list of columns with --keep_columns option. It must be a comma-separated list of column names. Allowed symbols: A-Z, a-z, _, and 0-9.");
+        fatal("Illegal list of columns with --keep-columns option. It must be a comma-separated list of column names. Allowed symbols: A-Z, a-z, _, and 0-9.");
     }
 
   if ((opt_threads < 1) || (opt_threads > MAX_THREADS))

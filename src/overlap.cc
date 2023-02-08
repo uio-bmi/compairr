@@ -452,9 +452,11 @@ static void sim_thread(int64_t t)
 
               int rep_id_no1 = db_get_repertoire_id_no(d1, a);
               const char * rep_id1 = db_get_repertoire_id(d1, rep_id_no1);
+              int64_t len1 = db_getsequencelen(d1, a);
 
               int rep_id_no2 = db_get_repertoire_id_no(d2, b);
               const char * rep_id2 = db_get_repertoire_id(d2, rep_id_no2);
+              int64_t len2 = db_getsequencelen(d2, b);
 
               fprintf(pairsfile,
                       "%s\t%s\t%" PRIu64 "\t%s\t%s\t",
@@ -477,6 +479,18 @@ static void sim_thread(int64_t t)
               db_fprint_sequence(pairsfile, d2, b);
               if (opt_keep_columns)
                 fprintf(pairsfile, "\t%s", db_get_keep_columns(d2, b));
+
+              if (opt_distance)
+                {
+                  /* Compute Hamming distance if len1 = len2,
+                     otherwise use Levenshtein distance of 1 (one indel) */
+                  int64_t dist = 1;
+                  if (len1 == len2)
+                    dist = seq_diff((unsigned char *)db_getsequence(d1, a),
+                                    (unsigned char *)db_getsequence(d2, b),
+                                    len1);
+                  fprintf(pairsfile, "\t%" PRId64, dist);
+                }
 
               fprintf(pairsfile, "\n");
             }
@@ -888,6 +902,8 @@ void overlap(char * set1_filename, char * set2_filename)
               seq_header);
       for (int k = 0; k < keep_columns_count; k++)
         fprintf(pairsfile, "\t%s_2", keep_columns_names[k]);
+      if (opt_distance)
+        fprintf(pairsfile, "\tdistance");
       fprintf(pairsfile, "\n");
     }
   if (opt_threads == 1)
