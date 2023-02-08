@@ -672,9 +672,8 @@ void parse_airr_tsv_line(char * line,
         p->keep[len++] = '\t';
       if (keep_columns_strings[k])
         {
-          unsigned int x = strlen(keep_columns_strings[k]);
-          strncpy(p->keep + len, keep_columns_strings[k], x);
-          len += x;
+          strcpy(p->keep + len, keep_columns_strings[k]);
+          len += strlen(keep_columns_strings[k]);
           keep_columns_strings[k] = nullptr;
         }
     }
