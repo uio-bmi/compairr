@@ -80,6 +80,7 @@ struct seqinfo_s
   uint64_t count;
   char * sequence_id;
   char * seq;
+  char * keep; /* extra columns to keep, tab separated */
   unsigned int seqlen;
   int repertoire_id_no;
   int v_gene_no;
@@ -214,6 +215,12 @@ void parse_airr_tsv_header(char * line,
         {
           d->col_cdr3_aa = i;
         }
+
+      for (int j = 0; j < keep_columns_count; j++)
+        {
+          if (strcmp(token, keep_columns_names[j]) == 0)
+            keep_columns_no[j] = i;
+        }
       i++;
     }
 
@@ -270,6 +277,20 @@ void parse_airr_tsv_header(char * line,
       fprintf(logfile, "\n");
       exit(1);
     }
+
+  bool any_missing = false;
+  for (int j = 0; j < keep_columns_count; j++)
+    if (keep_columns_no[j] < 1)
+      any_missing = true;
+  if (any_missing)
+    {
+      fprintf(logfile,
+              "\nWarning: missing column(s) to keep in header:");
+      for (int j = 0; j < keep_columns_count; j++)
+        if (keep_columns_no[j] < 1)
+          fprintf(logfile, " %s", keep_columns_names[j]);
+      fprintf(logfile, "\n");
+    }
 }
 
 void parse_airr_tsv_line(char * line,
@@ -287,6 +308,9 @@ void parse_airr_tsv_line(char * line,
   const char * junction_aa = nullptr;
   const char * cdr3 = nullptr;
   const char * cdr3_aa = nullptr;
+
+  for (int k = 0; k < keep_columns_count; k++)
+    keep_columns_strings[k] = nullptr;
 
   char delim[] = "\t";
   char * string = line;
@@ -332,6 +356,11 @@ void parse_airr_tsv_line(char * line,
         {
           cdr3_aa = token;
         }
+
+      for (int k = 0; k < keep_columns_count; k++)
+        if (i == keep_columns_no[k])
+          keep_columns_strings[k] = token;
+
       i++;
     }
 
@@ -618,6 +647,40 @@ void parse_airr_tsv_line(char * line,
       exit(1);
     }
 
+
+  /* handle keep_columns */
+
+  unsigned int len = 0;
+  for (int k = 0; k < keep_columns_count; k++)
+    {
+      if (keep_columns_strings[k])
+        len += strlen(keep_columns_strings[k]);
+      len++;
+    }
+  if (len > 0)
+    p->keep = (char *) xmalloc(len);
+  else
+    p->keep = nullptr;
+
+  len = 0;
+  bool first = true;
+  for (int k = 0; k < keep_columns_count; k++)
+    {
+      if (first)
+        first = false;
+      else
+        p->keep[len++] = '\t';
+      if (keep_columns_strings[k])
+        {
+          unsigned int x = strlen(keep_columns_strings[k]);
+          strncpy(p->keep + len, keep_columns_strings[k], x);
+          len += x;
+          keep_columns_strings[k] = nullptr;
+        }
+    }
+  if (p->keep)
+    p->keep[len] = 0;
+
   p->hash = 0;
 
   d->sequences++;
@@ -838,6 +901,11 @@ void db_free(struct db * d)
               xfree(d->seqindex[i].sequence_id);
               d->seqindex[i].sequence_id = nullptr;
             }
+          if (d->seqindex[i].keep)
+            {
+              xfree(d->seqindex[i].keep);
+              d->seqindex[i].keep = nullptr;
+            }
         }
       xfree(d->seqindex);
     }
@@ -951,4 +1019,13 @@ void db_fprint_sequence(FILE * f, struct db * d, uint64_t seqno)
       for (unsigned int i = 0; i < len; i++)
         fputc(aa_chars[(int)(seq[i])], f);
     }
+}
+
+char * db_get_keep_columns(struct db * d, uint64_t seqno)
+{
+  char * keep = d->seqindex[seqno].keep;
+  if (keep)
+    return keep;
+  else
+    return (char *) EMPTYSTRING;
 }

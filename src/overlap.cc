@@ -464,6 +464,9 @@ static void sim_thread(int64_t t)
                       db_get_v_gene_name(d1, a),
                       db_get_j_gene_name(d1, a));
               db_fprint_sequence(pairsfile, d1, a);
+              if (opt_keep_columns)
+                fprintf(pairsfile, "\t%s", db_get_keep_columns(d1, a));
+
               fprintf(pairsfile,
                       "\t%s\t%s\t%" PRIu64 "\t%s\t%s\t",
                       rep_id2,
@@ -472,6 +475,9 @@ static void sim_thread(int64_t t)
                       db_get_v_gene_name(d2, b),
                       db_get_j_gene_name(d2, b));
               db_fprint_sequence(pairsfile, d2, b);
+              if (opt_keep_columns)
+                fprintf(pairsfile, "\t%s", db_get_keep_columns(d2, b));
+
               fprintf(pairsfile, "\n");
             }
           pairs_count = 0;
@@ -872,10 +878,17 @@ void overlap(char * set1_filename, char * set2_filename)
     {
       fprintf(pairsfile,
               "#repertoire_id_1\tsequence_id_1\t"
-              "duplicate_count_1\tv_call_1\tj_call_1\t%s_1\t"
-              "repertoire_id_2\tsequence_id_2\t"
-              "duplicate_count_2\tv_call_2\tj_call_2\t%s_2\n",
-              seq_header, seq_header);
+              "duplicate_count_1\tv_call_1\tj_call_1\t%s_1",
+              seq_header);
+      for (int k = 0; k < keep_columns_count; k++)
+        fprintf(pairsfile, "\t%s_1", keep_columns_names[k]);
+      fprintf(pairsfile,
+              "\trepertoire_id_2\tsequence_id_2\t"
+              "duplicate_count_2\tv_call_2\tj_call_2\t%s_2",
+              seq_header);
+      for (int k = 0; k < keep_columns_count; k++)
+        fprintf(pairsfile, "\t%s_2", keep_columns_names[k]);
+      fprintf(pairsfile, "\n");
     }
   if (opt_threads == 1)
     {

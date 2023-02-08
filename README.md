@@ -150,15 +150,18 @@ names separated by tabs.
 
 If the `-p` or `--pairs` option is specified, CompAIRR will write
 information about all pairs of matching sequences to a specified TSV
-file. The following information will be included in the output:
-`repertoire_id_1`, `sequence_id_1`, `duplicate_count_1`, `v_call_1`,
-`j_call_1`, `junction_1`, `repertoire_id_2`, `sequence_id_2`,
-`duplicate_count_2`, `v_call_2`, `j_call_2`, and `junction_2`. The term
-`junction` will be replaced with `junction_aa`, `cdr3` or `cdr3_aa` as
-appropriate, depending on the options specified. Please note that such
-files may grow very large when there are many matches. Use of
-multithreading may be of little use in this case. The order of the
-lines in the file is unspecified.
+file. Please note that such files may grow very large when there are
+many matches. Use of multithreading may be of little use in this
+case. The order of the lines in the file is unspecified. The following
+columns from both input files will be included in the output:
+`repertoire_id`, `sequence_id`, `duplicate_count`, `v_call`, `j_call`,
+and `junction`. The term `junction` will be replaced with
+`junction_aa`, `cdr3`, or `cdr3_aa` as appropriate. Additional columns
+from the input files may be copied to the output file using the `-k`
+or `--keep_columns` option. Multiple columns, separated by commas (but
+no spaces), may be given. A warning will be given if any of the
+specified columns are missing. In the header, columns from the first
+and second input file will be suffixed by `_1` and `_2`, respectively.
 
 
 ## Analysing in which repertoires a set of sequences are present
@@ -292,6 +295,7 @@ Short | Long               | Argument | Default  | Description
 `-g`  | `--ignore-genes`   |          |          | Ignore V and J gene information
 `-h`  | `--help`           |          |          | Display help text and exit
 `-i`  | `--indels`         |          |          | Allow insertions or deletions
+`-k`  | `--keep_columns`   | STRING   |          | Copy given comma-separated columns to pairs file
 `-l`  | `--log`            | FILENAME | (stderr) | Log to specified file instead of stderr
 `-m`  | `--matrix`         |          |          | Compute overlap matrix between two sets
 `-n`  | `--nucleotides`    |          |          | Compare nucleotides, not amino acids

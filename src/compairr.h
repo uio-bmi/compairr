@@ -149,6 +149,7 @@ extern bool opt_matrix;
 extern bool opt_nucleotides;
 extern bool opt_version;
 extern bool opt_deduplicate;
+extern char * opt_keep_columns;
 extern char * opt_log;
 extern char * opt_output_file;
 extern char * opt_pairs;
@@ -162,6 +163,11 @@ extern const char * seq_header;
 extern FILE * outfile;
 extern FILE * logfile;
 extern FILE * pairsfile;
+
+extern int keep_columns_count;
+extern int * keep_columns_no;
+extern char ** keep_columns_names;
+extern char ** keep_columns_strings;
 
 /* header files */
 

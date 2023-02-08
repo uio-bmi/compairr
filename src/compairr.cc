@@ -59,6 +59,7 @@ bool opt_matrix;
 bool opt_nucleotides;
 bool opt_version;
 bool opt_deduplicate;
+char * opt_keep_columns;
 char * opt_log;
 char * opt_output;
 char * opt_pairs;
@@ -74,6 +75,11 @@ const char * seq_header = nullptr;
 FILE * outfile = nullptr;
 FILE * logfile = nullptr;
 FILE * pairsfile = nullptr;
+
+int keep_columns_count = 0;
+int * keep_columns_no = nullptr;
+char ** keep_columns_names = nullptr;
+char ** keep_columns_strings = nullptr;
 
 int alphabet_size;
 
@@ -101,6 +107,67 @@ void show_header();
 void args_init(int argc, char **argv);
 void open_files();
 void close_files();
+
+bool parse_keep_columns()
+{
+  unsigned int len = strlen(opt_keep_columns);
+  keep_columns_count = 1;
+  for (unsigned int i = 0; i < len; i++)
+    if (opt_keep_columns[i] == ',')
+      keep_columns_count++;
+
+  keep_columns_no = (int *) xmalloc
+    (keep_columns_count * sizeof(int));
+
+  keep_columns_names = (char **) xmalloc
+    (keep_columns_count * sizeof(char *));
+
+  keep_columns_strings = (char **) xmalloc
+    (keep_columns_count * sizeof(char *));
+
+  for (int j = 0; j < keep_columns_count; j++)
+    keep_columns_no[j] = 0;
+
+  keep_columns_count = 0;
+  unsigned int curlen = 0;
+  for (unsigned int i = 0; i < len; i++)
+    {
+      char c = opt_keep_columns[i];
+      if (c == ',')
+        {
+          if (curlen == 0)
+            return false;
+          else
+            {
+              opt_keep_columns[i] = 0;
+              keep_columns_names[keep_columns_count] =
+                xstrdup(opt_keep_columns + i - curlen);
+              opt_keep_columns[i] = ',';
+              keep_columns_count++;
+              curlen = 0;
+            }
+        }
+      else if (((c >= 'A') && (c <= 'Z')) ||
+               ((c >= 'a') && (c <= 'z')) ||
+               ((c >= '0') && (c <= '9')) ||
+               (c == '_'))
+        {
+          curlen++;
+        }
+      else
+        {
+          return false;
+        }
+    }
+
+  if (curlen == 0)
+    return false;
+
+  keep_columns_names[keep_columns_count] =
+    xstrdup(opt_keep_columns + len - curlen);
+  keep_columns_count++;
+  return true;
+}
 
 int64_t args_long(char * str, const char * option)
 {
@@ -165,6 +232,7 @@ void args_show()
       fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
       fprintf(logfile, "Score (s):         %s\n", score_descr[opt_score_int]);
       fprintf(logfile, "Pairs file (p):    %s\n", opt_pairs ? opt_pairs : "(none)");
+      fprintf(logfile, "Keep columns:      %s\n", opt_keep_columns ? opt_keep_columns : "");
     }
   fprintf(logfile, "Log file (l):      %s\n", opt_log ? opt_log : "(stderr)");
 }
@@ -194,6 +262,7 @@ void args_usage()
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
   fprintf(stderr, "     --cdr3                  use the cdr3(_aa) column instead of junction(_aa)\n");
+  fprintf(stderr, "     --keep_columns STRING   comma-separated columns to copy to pairs file\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr*)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout*)\n");
   fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none*)\n");
@@ -228,6 +297,7 @@ void args_init(int argc, char **argv)
   opt_ignore_genes = false;
   opt_ignore_unknown = false;
   opt_indels = false;
+  opt_keep_columns = nullptr;
   opt_log = nullptr;
   opt_matrix = false;
   opt_nucleotides = false;
@@ -240,9 +310,9 @@ void args_init(int argc, char **argv)
 
   opterr = 1;
 
-  char short_options[] = "acd:fghil:mno:p:s:t:uvxz";
+  char short_options[] = "acd:fghik:l:mno:p:s:t:uvxz";
 
-  /* unused short option letters: bejkqrwy */
+  /* unused short option letters: bejqrwy */
 
   static struct option long_options[] =
   {
@@ -254,6 +324,7 @@ void args_init(int argc, char **argv)
     {"ignore-genes",     no_argument,       nullptr, 'g' },
     {"help",             no_argument,       nullptr, 'h' },
     {"indels",           no_argument,       nullptr, 'i' },
+    {"keep_columns",     required_argument, nullptr, 'k' },
     {"log",              required_argument, nullptr, 'l' },
     {"matrix",           no_argument,       nullptr, 'm' },
     {"nucleotides",      no_argument,       nullptr, 'n' },
@@ -343,6 +414,11 @@ void args_init(int argc, char **argv)
         opt_indels = true;
         break;
 
+      case 'k':
+        /* keep_columns */
+        opt_keep_columns = optarg;
+        break;
+
       case 'l':
         /* log */
         opt_log = optarg;
@@ -405,6 +481,11 @@ void args_init(int argc, char **argv)
           case 1:
             /* cdr3 */
             opt_cdr3 = true;
+            break;
+
+          case 8:
+            /* keep_columns */
+            opt_keep_columns = optarg;
             break;
 
           default:
@@ -481,6 +562,13 @@ void args_init(int argc, char **argv)
         fatal("Option -i or --indels is not allowed for deduplication.");
     }
 
+  if (opt_keep_columns)
+    {
+      if (! opt_pairs)
+        fatal("Option --keep_columns only allowed with --pairs options.");
+      if (! parse_keep_columns())
+        fatal("Illegal list of columns with --keep_columns option. It must be a comma-separated list of column names. Allowed symbols: A-Z, a-z, _, and 0-9.");
+    }
 
   if ((opt_threads < 1) || (opt_threads > MAX_THREADS))
     {
@@ -631,6 +719,24 @@ int main(int argc, char** argv)
     cluster(input1_filename);
 
   show_time("End time:          ");
+
+  if (keep_columns_no)
+    {
+      xfree(keep_columns_no);
+      keep_columns_no = nullptr;
+    }
+
+  if (keep_columns_names)
+    {
+      xfree(keep_columns_names);
+      keep_columns_names = nullptr;
+    }
+
+  if (keep_columns_strings)
+    {
+      xfree(keep_columns_strings);
+      keep_columns_strings = nullptr;
+    }
 
   close_files();
 }
