@@ -37,6 +37,12 @@ CompAIRR can be installed using homebrew with
 `brew install torognes/bioinf/compairr` on macOS.
 
 
+## Tutorial
+
+For an introduction to how to use CompAIRR, please have a look at the
+[CompAIRR tutorial](https://github.com/LonnekeScheffer/compairr-tutorial).
+
+
 ## General options
 
 Use the `-h` or `--help` option to show some help information.
