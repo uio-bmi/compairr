@@ -13,11 +13,11 @@ compared to similar tools, when up to 2 differences are allowed.
 
 ## Installation
 
-The code is C++11 standard compliant and should compile easily using a
-modern C++ compiler (e.g. GNU GCC or LLVM Clang). Run `make clean`,
-`make`, `make test` or `make install` in the main folder to clean,
-build, test or install the tool. There are no dependencies except for the
-C and C++ standard libraries.
+The code is C++11 standard compliant and should compile easily using
+`make` and a modern C++ compiler (e.g. GNU GCC or LLVM Clang). Run
+`make clean`, `make`, `make test` and `make install` in the main
+folder to clean, build, test and install the tool. There are no
+dependencies except for the C and C++ standard libraries.
 
 Binaries for Linux (x86_64) and macOS (x86_64 and Arm64) are also
 distributed with each
@@ -33,8 +33,8 @@ docker build -t compairr .
 Ready-made Docker images for CompAIRR can be found on the
 [Docker Hub](https://hub.docker.com/r/torognes/compairr).
 
-CompAIRR can be installed using homebrew with
-`brew install torognes/bioinf/compairr` on macOS.
+CompAIRR can be installed on macOS using homebrew with
+`brew install torognes/bioinf/compairr`.
 
 
 ## Tutorial
