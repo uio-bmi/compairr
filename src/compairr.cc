@@ -53,6 +53,7 @@ bool opt_distance;
 bool opt_existence;
 bool opt_help;
 bool opt_ignore_counts;
+bool opt_ignore_empty;
 bool opt_ignore_genes;
 bool opt_ignore_unknown;
 bool opt_indels;
@@ -224,6 +225,8 @@ void args_show()
           opt_ignore_genes ? "Yes" : "No");
   fprintf(logfile, "Ign. unknown (u):  %s\n",
           opt_ignore_unknown ? "Yes" : "No");
+  fprintf(logfile, "Ignore empty (e):  %s\n",
+          opt_ignore_empty ? "Yes" : "No");
   fprintf(logfile, "Use cdr3 column:   %s\n",
           opt_cdr3 ? "Yes" : "No");
   fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
@@ -259,6 +262,7 @@ void args_usage()
   fprintf(stderr, " -s, --score STRING          MH, Jaccard, product*, ratio, min, max, or mean\n");
   fprintf(stderr, " -t, --threads INTEGER       number of threads to use (1*-256)\n");
   fprintf(stderr, " -u, --ignore-unknown        ignore sequences with unknown symbols\n");
+  fprintf(stderr, " -e, --ignore-empty          ignore empty sequences\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Input/output options:\n");
   fprintf(stderr, " -a, --alternative           output results in three-column format, not matrix\n");
@@ -299,6 +303,7 @@ void args_init(int argc, char **argv)
   opt_ignore_counts = false;
   opt_ignore_genes = false;
   opt_ignore_unknown = false;
+  opt_ignore_empty = false;
   opt_indels = false;
   opt_keep_columns = nullptr;
   opt_log = nullptr;
@@ -313,7 +318,7 @@ void args_init(int argc, char **argv)
 
   opterr = 1;
 
-  char short_options[] = "acd:fghik:l:mno:p:s:t:uvxz";
+  char short_options[] = "acd:efghik:l:mno:p:s:t:uvxz";
 
   /* unused short option letters: bejqrwy */
 
@@ -324,6 +329,7 @@ void args_init(int argc, char **argv)
     {"cluster",          no_argument,       nullptr, 'c' },
     {"differences",      required_argument, nullptr, 'd' },
     {"distance",         no_argument,       nullptr, 0   },
+    {"ignore-empty",     no_argument,       nullptr, 'e' },
     {"ignore-counts",    no_argument,       nullptr, 'f' },
     {"ignore-genes",     no_argument,       nullptr, 'g' },
     {"help",             no_argument,       nullptr, 'h' },
@@ -351,6 +357,7 @@ void args_init(int argc, char **argv)
       option_cluster,
       option_differences,
       option_distance,
+      option_ignore_empty,
       option_ignore_counts,
       option_ignore_genes,
       option_help,
@@ -422,6 +429,11 @@ void args_init(int argc, char **argv)
       case 'd':
         /* differences */
         opt_differences = args_long(optarg, "-d or --differences");
+        break;
+
+      case 'e':
+        /* ignore-empty */
+        opt_ignore_empty = true;
         break;
 
       case 'f':

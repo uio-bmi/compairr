@@ -71,7 +71,9 @@ accepted nucleotide symbols are `ACGTU`. Lower case letters are also
 accepted. The program will abort with an error message if any other
 symbol is encountered in a sequence, unless one specifies the `-u` or
 `--ignore-unknown` option, in which case CompAIRR will simply ignore
-that sequence.
+that sequence. If the program encounters an empty sequence it will
+also abort with an error message, unless the `-e` or `--ignore-empty`
+option is given.
 
 By default, the sequences should be given in the `junction` or
 `junction_aa` column of the input file, for nucleotide and amino acid
@@ -303,6 +305,7 @@ Short | Long               | Argument | Default  | Description
 `-c`  | `--cluster`        |          |          | Cluster sequences in one repertoire
 `-d`  | `--differences`    | INTEGER  | 0        | Number of differences accepted
 `  `  | `--distance`       |          |          | Include sequence distance in pairs file
+`-e`  | `--ignore-empty`   |          |          | Ignore empty sequences
 `-f`  | `--ignore-counts`  |          |          | Ignore duplicate count information
 `-g`  | `--ignore-genes`   |          |          | Ignore V and J gene information
 `-h`  | `--help`           |          |          | Display help text and exit

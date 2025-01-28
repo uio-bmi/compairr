@@ -101,6 +101,8 @@ struct db
   uint64_t residues_count;
   uint64_t total_duplicate_count;
   uint64_t repertoire_count;
+  uint64_t ignored_unknown;
+  uint64_t ignored_empty;
   std::vector<std::string> repertoire_id_vector;
   std::map<std::string, int> repertoire_id_map;
   int col_junction;
@@ -442,12 +444,13 @@ void parse_airr_tsv_line(char * line,
               if (opt_ignore_unknown)
                 {
                   ignore_seq = true;
+                  d->ignored_unknown++;
                 }
               else
                 {
                   fprintf(logfile,
                           "\n\nError: Illegal character '%c' in sequence "
-                          "on line %" PRIu64 "\n",
+                          "on line %" PRIu64 ". Use -u to ignore.\n",
                           c,
                           lineno);
                   exit(1);
@@ -462,6 +465,23 @@ void parse_airr_tsv_line(char * line,
                       lineno);
               exit(1);
             }
+        }
+    }
+
+  if (seqlen == 0)
+    {
+      if (opt_ignore_empty)
+        {
+          ignore_seq = true;
+          d->ignored_empty++;
+        }
+      else
+        {
+          fprintf(logfile,
+                  "\n\nError: Empty sequence in sequence "
+                  "on line %" PRIu64 ". Use -e to ignore.\n",
+                  lineno);
+          exit(1);
         }
     }
 
@@ -728,6 +748,8 @@ void db_read(struct db * d,
 
   d->longest = 0;
   d->shortest = UINT_MAX;
+  d->ignored_unknown = 0;
+  d->ignored_empty = 0;
 
   int state = 0;
 
@@ -823,6 +845,12 @@ void db_read(struct db * d,
   fclose(fp);
 
   d->repertoire_count = d->repertoire_id_vector.size();
+
+  if (d->ignored_unknown > 0)
+    fprintf(logfile, "%" PRIu64 " sequences with unknown symbols ignored.\n", d->ignored_unknown);
+
+  if (d->ignored_empty > 0)
+    fprintf(logfile, "%" PRIu64 " empty sequences ignored.\n", d->ignored_empty);
 
   if (d->sequences > 0)
     {
