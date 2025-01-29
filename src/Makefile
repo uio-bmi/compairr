@@ -44,8 +44,18 @@ else
 	COMMON += -flto -O3
 endif
 
+# Identify Machine
+ifeq ($(CXX), aarch64-linux-gnu-g++)
+        MACHINE = aarch64
+else ifeq ($(CXX), x86_64-linux-gnu-g++)
+        MACHINE = x86_64
+else ifeq ($(CXX), powerpc64le-linux-gnu-g++)
+        MACHINE = ppc64le
+else
+        MACHINE = $(shell uname -m)
+endif
+
 # Machine specific
-MACHINE = $(shell uname -m)
 ifeq ($(MACHINE), x86_64)
 	COMMON += -march=x86-64 -mtune=generic
 else ifeq ($(MACHINE), arm64)
