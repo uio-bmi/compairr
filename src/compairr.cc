@@ -59,6 +59,7 @@ bool opt_ignore_unknown;
 bool opt_indels;
 bool opt_matrix;
 bool opt_nucleotides;
+bool opt_no_matrix;
 bool opt_version;
 bool opt_deduplicate;
 char * opt_keep_columns;
@@ -230,7 +231,10 @@ void args_show()
   fprintf(logfile, "Use cdr3 column:   %s\n",
           opt_cdr3 ? "Yes" : "No");
   fprintf(logfile, "Threads (t):       %" PRId64 "\n", opt_threads);
-  fprintf(logfile, "Output file (o):   %s\n", opt_output);
+  if (opt_no_matrix)
+    fprintf(logfile, "Output file (o):   (none)\n");
+  else
+    fprintf(logfile, "Output file (o):   %s\n", opt_output);
   if (opt_matrix || opt_existence)
     {
       fprintf(logfile, "Output format (a): %s\n", opt_alternative ? "Column" : "Matrix");
@@ -271,6 +275,7 @@ void args_usage()
   fprintf(stderr, " -k, --keep-columns STRING   comma-separated columns to copy to pairs file\n");
   fprintf(stderr, " -l, --log FILENAME          log to file (stderr*)\n");
   fprintf(stderr, " -o, --output FILENAME       output results to file (stdout*)\n");
+  fprintf(stderr, "     --no-matrix             do not keep or output any matrix\n");
   fprintf(stderr, " -p, --pairs FILENAME        output matching pairs to file (none*)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "                             * default value\n");
@@ -309,6 +314,7 @@ void args_init(int argc, char **argv)
   opt_log = nullptr;
   opt_matrix = false;
   opt_nucleotides = false;
+  opt_no_matrix = false;
   opt_output = DASH_FILENAME;
   opt_pairs = nullptr;
   opt_score_int = 0;
@@ -338,6 +344,7 @@ void args_init(int argc, char **argv)
     {"log",              required_argument, nullptr, 'l' },
     {"matrix",           no_argument,       nullptr, 'm' },
     {"nucleotides",      no_argument,       nullptr, 'n' },
+    {"no-matrix",        no_argument,       nullptr, 0   },
     {"output",           required_argument, nullptr, 'o' },
     {"pairs",            required_argument, nullptr, 'p' },
     {"score",            required_argument, nullptr, 's' },
@@ -366,6 +373,7 @@ void args_init(int argc, char **argv)
       option_log,
       option_matrix,
       option_nucleotides,
+      option_no_matrix,
       option_output,
       option_pairs,
       option_score,
@@ -529,6 +537,11 @@ void args_init(int argc, char **argv)
           case option_distance:
             /* distance */
             opt_distance = true;
+            break;
+
+          case option_no_matrix:
+            /* no_matrix */
+            opt_no_matrix = true;
             break;
 
           default:

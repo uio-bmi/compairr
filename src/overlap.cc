@@ -215,14 +215,17 @@ static void find_variant_matches(uint64_t seed,
 
                   m_val_t s = compute_score(f, g);
 
-                  if (opt_matrix)
-                    {
-                      repertoire_matrix[set2_repertoires * i + j] += s;
-                    }
-                  else
-                    {
-                      repertoire_matrix[set2_repertoires * seed + j] += s;
-                    }
+		  if (! opt_no_matrix)
+		    {
+		      if (opt_matrix)
+			{
+			  repertoire_matrix[set2_repertoires * i + j] += s;
+			}
+		      else
+			{
+			  repertoire_matrix[set2_repertoires * seed + j] += s;
+			}
+		    }
 
                   all_matches++;
 
@@ -321,13 +324,16 @@ static void process_trad(uint64_t seed,
 
                 m_val_t s = compute_score(f, g);
 
-                if (opt_matrix)
+                if (! opt_no_matrix)
                   {
-                    repertoire_matrix[set2_repertoires * i + j] += s;
-                  }
-                else
-                  {
-                    repertoire_matrix[set2_repertoires * seed + j] += s;
+                    if (opt_matrix)
+                      {
+                        repertoire_matrix[set2_repertoires * i + j] += s;
+                      }
+                    else
+                      {
+                        repertoire_matrix[set2_repertoires * seed + j] += s;
+                      }
                   }
 
                 all_matches++;
@@ -389,21 +395,24 @@ static void sim_thread(int64_t t)
     {
       /* if multiple threads, create local matrix */
 
-      if (opt_matrix)
+      if (! opt_no_matrix)
         {
-          repertoire_matrix_local = static_cast<m_val_t *>
-            (xmalloc(set1_repertoires * set2_repertoires * sizeof(m_val_t)));
+          if (opt_matrix)
+            {
+              repertoire_matrix_local = static_cast<m_val_t *>
+                (xmalloc(set1_repertoires * set2_repertoires * sizeof(m_val_t)));
 
-          for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
-            repertoire_matrix_local[k] = 0;
-        }
-      else
-        {
-          repertoire_matrix_local = static_cast<m_val_t *>
-            (xmalloc(set1_sequences * set2_repertoires * sizeof(m_val_t)));
+              for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+                repertoire_matrix_local[k] = 0;
+            }
+          else
+            {
+              repertoire_matrix_local = static_cast<m_val_t *>
+                (xmalloc(set1_sequences * set2_repertoires * sizeof(m_val_t)));
 
-          for(uint64_t k = 0; k < set1_sequences * set2_repertoires; k++)
-            repertoire_matrix_local[k] = 0;
+              for(uint64_t k = 0; k < set1_sequences * set2_repertoires; k++)
+                repertoire_matrix_local[k] = 0;
+            }
         }
 
       pthread_mutex_lock(&network_mutex);
@@ -501,20 +510,25 @@ static void sim_thread(int64_t t)
   if (opt_threads > 1)
     {
       /* update global repertoire_matrix */
-      if (opt_matrix)
+      if (! opt_no_matrix)
         {
-          for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
-            repertoire_matrix[k] += repertoire_matrix_local[k];
-        }
-      else
-        {
-          for(uint64_t k = 0; k < set1_sequences * set2_repertoires; k++)
-            repertoire_matrix[k] += repertoire_matrix_local[k];
+          if (opt_matrix)
+            {
+              for(uint64_t k = 0; k < set1_repertoires * set2_repertoires; k++)
+                repertoire_matrix[k] += repertoire_matrix_local[k];
+            }
+          else
+            {
+              for(uint64_t k = 0; k < set1_sequences * set2_repertoires; k++)
+                repertoire_matrix[k] += repertoire_matrix_local[k];
+            }
         }
 
       pthread_mutex_unlock(&network_mutex);
 
-      xfree(repertoire_matrix_local);
+      if (repertoire_matrix_local)
+        xfree(repertoire_matrix_local);
+      repertoire_matrix_local = nullptr;
     }
 
   xfree(variant_list);
@@ -859,27 +873,30 @@ void overlap(char * set1_filename, char * set2_filename)
         fprintf(logfile, "Warning: %" PRIu64 " duplicates detected in repertoire set 2\n", dup2);
     }
 
-  if (opt_matrix)
+  if (! opt_no_matrix)
     {
-      /* allocate matrix of repertoire set 1 x repertoire set 2 counts */
+      if (opt_matrix)
+        {
+          /* allocate matrix of repertoire set 1 x repertoire set 2 counts */
 
-      repertoire_matrix = static_cast<m_val_t *>
-        (xmalloc(sizeof(m_val_t) * set1_repertoires * set2_repertoires));
+          repertoire_matrix = static_cast<m_val_t *>
+            (xmalloc(sizeof(m_val_t) * set1_repertoires * set2_repertoires));
 
-      for(unsigned int s = 0; s < set1_repertoires; s++)
-        for(unsigned int t = 0; t < set2_repertoires; t++)
-          repertoire_matrix[set2_repertoires * s + t] = 0;
-    }
-  else
-    {
-      /* allocate matrix of set 1 sequences x repertoire set 2 counts */
+          for(unsigned int s = 0; s < set1_repertoires; s++)
+            for(unsigned int t = 0; t < set2_repertoires; t++)
+              repertoire_matrix[set2_repertoires * s + t] = 0;
+        }
+      else
+        {
+          /* allocate matrix of set 1 sequences x repertoire set 2 counts */
 
-      repertoire_matrix = static_cast<m_val_t *>
-        (xmalloc(sizeof(m_val_t) * set1_sequences * set2_repertoires));
+          repertoire_matrix = static_cast<m_val_t *>
+            (xmalloc(sizeof(m_val_t) * set1_sequences * set2_repertoires));
 
-      for(unsigned int s = 0; s < set1_sequences; s++)
-        for(unsigned int t = 0; t < set2_repertoires; t++)
-          repertoire_matrix[set2_repertoires * s + t] = 0;
+          for(unsigned int s = 0; s < set1_sequences; s++)
+            for(unsigned int t = 0; t < set2_repertoires; t++)
+              repertoire_matrix[set2_repertoires * s + t] = 0;
+        }
     }
 
   /* compare all sequences */
@@ -924,96 +941,99 @@ void overlap(char * set1_filename, char * set2_filename)
 
   /* dump similarity matrix */
 
-  unsigned int x = 0;
-  if (opt_alternative)
+  if (! opt_no_matrix)
     {
-      if (opt_matrix)
+      unsigned int x = 0;
+      if (opt_alternative)
         {
-          /* Overlap results, 3-column format */
-          progress_init("Writing results:  ",
-                        set1_repertoires * set2_repertoires);
-          fprintf(outfile, "#repertoire_id_1\trepertoire_id_2\tmatches\n");
-          for (unsigned int i = 0; i < set1_repertoires; i++)
+          if (opt_matrix)
             {
-              unsigned int s = set1_lookup_repertoire[i];
-              for (unsigned int j = 0; j < set2_repertoires; j++)
+              /* Overlap results, 3-column format */
+              progress_init("Writing results:  ",
+                            set1_repertoires * set2_repertoires);
+              fprintf(outfile, "#repertoire_id_1\trepertoire_id_2\tmatches\n");
+              for (unsigned int i = 0; i < set1_repertoires; i++)
                 {
-                  unsigned int t = set2_lookup_repertoire[j];
-                  fprintf(outfile,
-                          "%s\t%s",
-                          db_get_repertoire_id(d1, s),
-                          db_get_repertoire_id(d2, t));
-                  show_matrix_value(s, t);
-                  fprintf(outfile, "\n");
-                  progress_update(++x);
+                  unsigned int s = set1_lookup_repertoire[i];
+                  for (unsigned int j = 0; j < set2_repertoires; j++)
+                    {
+                      unsigned int t = set2_lookup_repertoire[j];
+                      fprintf(outfile,
+                              "%s\t%s",
+                              db_get_repertoire_id(d1, s),
+                              db_get_repertoire_id(d2, t));
+                      show_matrix_value(s, t);
+                      fprintf(outfile, "\n");
+                      progress_update(++x);
+                    }
+                }
+            }
+          else
+            {
+              /* Existence results, 3-column format */
+              progress_init("Writing results:  ",
+                            set1_sequences * set2_repertoires);
+              fprintf(outfile, "#sequence_id_1\trepertoire_id_2\tmatches\n");
+              for (unsigned int i = 0; i < set1_sequences; i++)
+                {
+                  for (unsigned int j = 0; j < set2_repertoires; j++)
+                    {
+                      unsigned int t = set2_lookup_repertoire[j];
+                      fprintf(outfile,
+                              "%s\t%s",
+                              db_get_sequence_id(d1, i),
+                              db_get_repertoire_id(d2, t));
+                      show_matrix_value(i, t);
+                      fprintf(outfile, "\n");
+                      progress_update(++x);
+                    }
                 }
             }
         }
       else
         {
-          /* Existence results, 3-column format */
-          progress_init("Writing results:  ",
-                        set1_sequences * set2_repertoires);
-          fprintf(outfile, "#sequence_id_1\trepertoire_id_2\tmatches\n");
-          for (unsigned int i = 0; i < set1_sequences; i++)
+          if (opt_matrix)
             {
+              /* Overlap results, matrix format */
+              progress_init("Writing results:  ",
+                            set1_repertoires * set2_repertoires);
+              fprintf(outfile, "#");
               for (unsigned int j = 0; j < set2_repertoires; j++)
+                fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
+              fprintf(outfile, "\n");
+              for (unsigned int i = 0; i < set1_repertoires; i++)
                 {
-                  unsigned int t = set2_lookup_repertoire[j];
-                  fprintf(outfile,
-                          "%s\t%s",
-                          db_get_sequence_id(d1, i),
-                          db_get_repertoire_id(d2, t));
-                  show_matrix_value(i, t);
+                  unsigned int s = set1_lookup_repertoire[i];
+                  fprintf(outfile, "%s", db_get_repertoire_id(d1, s));
+                  for (unsigned int j = 0; j < set2_repertoires; j++)
+                    {
+                      unsigned int t = set2_lookup_repertoire[j];
+                      show_matrix_value(s, t);
+                      progress_update(++x);
+                    }
                   fprintf(outfile, "\n");
-                  progress_update(++x);
                 }
             }
-        }
-    }
-  else
-    {
-      if (opt_matrix)
-        {
-          /* Overlap results, matrix format */
-          progress_init("Writing results:  ",
-                        set1_repertoires * set2_repertoires);
-          fprintf(outfile, "#");
-          for (unsigned int j = 0; j < set2_repertoires; j++)
-            fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
-          fprintf(outfile, "\n");
-          for (unsigned int i = 0; i < set1_repertoires; i++)
+          else
             {
-              unsigned int s = set1_lookup_repertoire[i];
-              fprintf(outfile, "%s", db_get_repertoire_id(d1, s));
+              /* Existence results, matrix format */
+              progress_init("Writing results:  ",
+                            set1_sequences * set2_repertoires);
+              fprintf(outfile, "#");
               for (unsigned int j = 0; j < set2_repertoires; j++)
-                {
-                  unsigned int t = set2_lookup_repertoire[j];
-                  show_matrix_value(s, t);
-                  progress_update(++x);
-                }
+                fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
               fprintf(outfile, "\n");
-            }
-        }
-      else
-        {
-          /* Existence results, matrix format */
-          progress_init("Writing results:  ",
-                        set1_sequences * set2_repertoires);
-          fprintf(outfile, "#");
-          for (unsigned int j = 0; j < set2_repertoires; j++)
-            fprintf(outfile, "\t%s", db_get_repertoire_id(d2, set2_lookup_repertoire[j]));
-          fprintf(outfile, "\n");
-          for (unsigned int i = 0; i < set1_sequences; i++)
-            {
-              fprintf(outfile, "%s", db_get_sequence_id(d1, i));
-              for (unsigned int j = 0; j < set2_repertoires; j++)
+              for (unsigned int i = 0; i < set1_sequences; i++)
                 {
-                  unsigned int t = set2_lookup_repertoire[j];
-                  show_matrix_value(i, t);
-                  progress_update(++x);
+                  fprintf(outfile, "%s", db_get_sequence_id(d1, i));
+                  for (unsigned int j = 0; j < set2_repertoires; j++)
+                    {
+                      unsigned int t = set2_lookup_repertoire[j];
+                      show_matrix_value(i, t);
+                      progress_update(++x);
+                    }
+                  fprintf(outfile, "\n");
                 }
-              fprintf(outfile, "\n");
             }
         }
     }
