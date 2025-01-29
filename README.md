@@ -172,7 +172,7 @@ columns are missing. In the header, columns from the first and second
 input file will be suffixed by `_1` and `_2`, respectively. The
 distance between the sequences will be included if the `--distance`
 option is included. This is usually the Hamming distance (minimum
-number of substitutions), unless the `--indel` (or `-i´) option is
+number of substitutions), unless the `--indel` (or `-i`) option is
 specified, in which case the distance is the Levenshtein distance
 (minimum number of substitutions or indels). If only the information
 in the pairs file is required, and not the information in the matrix,
