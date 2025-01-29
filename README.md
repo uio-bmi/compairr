@@ -174,7 +174,11 @@ distance between the sequences will be included if the `--distance`
 option is included. This is usually the Hamming distance (minimum
 number of substitutions), unless the `--indel` (or `-i´) option is
 specified, in which case the distance is the Levenshtein distance
-(minimum number of substitutions or indels).
+(minimum number of substitutions or indels). If only the information
+in the pairs file is required, and not the information in the matrix,
+the storage and output of the matrix can be avoided with the
+`--no-matrix` option. This may save some memory and time if there are
+many repertoires in the sets.
 
 
 ## Analysing in which repertoires a set of sequences are present
@@ -313,6 +317,7 @@ Short | Long               | Argument | Default  | Description
 `-k`  | `--keep-columns`   | STRING   |          | Copy given comma-separated columns to pairs file
 `-l`  | `--log`            | FILENAME | (stderr) | Log to specified file instead of stderr
 `-m`  | `--matrix`         |          |          | Compute overlap matrix between two sets
+`  `  | `--no-matrix`      |          |          | Do not keep or output any matrix
 `-n`  | `--nucleotides`    |          |          | Compare nucleotides, not amino acids
 `-o`  | `--output`         | FILENAME | (stdout) | Output results to specified file instead of stdout
 `-p`  | `--pairs`          | FILENAME | (none)   | Output matching pairs to specified file
